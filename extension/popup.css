@@ -11,6 +11,10 @@ legend { padding: 0 4px; color: #666; font-size: 12px; }
 fieldset label { display: flex; align-items: flex-start; gap: 6px; padding: 3px 0; cursor: pointer; }
 fieldset label input { margin: 3px 0 0; flex: none; }
 #likeLast { word-break: break-all; }
+.key-row { display: flex; align-items: center; justify-content: space-between; padding: 3px 0 3px 22px; }
+button.key { min-width: 64px; font-weight: 600; color: #222; }
+button.key.capturing { border-color: #2f8a45; background: #eef8f0; color: #2f8a45; }
+#keyHint.error { color: #b3261e; }
 .badge { padding: 0 5px; border: 1px solid #b7dfc0; border-radius: 3px; background: #eef8f0; color: #2f8a45; font-size: 11px; font-weight: 600; }
 .sync-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 4px 0; color: #555; font-size: 12px; }
 #syncStatus.error { color: #b3261e; }

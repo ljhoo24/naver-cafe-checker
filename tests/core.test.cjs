@@ -50,7 +50,7 @@ test('keys connect cafe url names with numeric ids in both directions', () => {
 });
 
 test('storage helpers: defaults, split and pruning oldest first', () => {
-  assert.deepEqual(C.settings({ dim: false, badge: 'x' }), { enabled: true, dim: false, badge: true, sync: true, likeRetry: true });
+  assert.deepEqual(C.settings({ dim: false, badge: 'x' }), { enabled: true, dim: false, badge: true, sync: true, likeRetry: true, hotkeys: true, prevKey: 'KeyA', nextKey: 'KeyS' });
   const state = C.fromStorage({ 'r:c:1:2': 5, 'a:foo': '1', 'a:bad': 'x', settings: { enabled: false } });
   assert.deepEqual([...state.reads], ['r:c:1:2']);
   assert.deepEqual(state.aliases, { foo: '1' });

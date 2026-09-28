@@ -3,7 +3,8 @@
 //   r:c:<cafeId>:<articleId> -> timestamp   read article, cafe known by numeric id
 //   r:u:<cafeUrl>:<articleId> -> timestamp  read article, cafe known only by its url name
 //   a:<cafeUrl> -> cafeId                    learned cafe url name -> numeric id
-//   settings -> { enabled, dim, badge, sync, likeRetry }
+//   settings -> { enabled, dim, badge, sync, likeRetry, hotkeys, prevKey, nextKey }
+//   (prevKey/nextKey are KeyboardEvent.code values, so they work in any IME mode)
 (function (root, factory) {
   const api = factory();
   if (typeof module === 'object' && module.exports) module.exports = api;
@@ -14,7 +15,15 @@
   const ALIAS = 'a:';
   const SETTINGS = 'settings';
   const MAX_READS = 50000;
-  const DEFAULTS = Object.freeze({ enabled: true, dim: true, badge: true, sync: true, likeRetry: true });
+  const DEFAULTS = Object.freeze({
+    enabled: true, dim: true, badge: true, sync: true, likeRetry: true,
+    hotkeys: true, prevKey: 'KeyA', nextKey: 'KeyS'
+  });
+  const HOTKEY_CODE = /^(?:Key[A-Z]|Digit[0-9]|Numpad[0-9]|Arrow(?:Left|Right|Up|Down)|BracketLeft|BracketRight|Comma|Period|Semicolon|Quote|Slash|Backslash|Minus|Equal|Backquote)$/;
+  const KEY_LABELS = {
+    ArrowLeft: '←', ArrowRight: '→', ArrowUp: '↑', ArrowDown: '↓', BracketLeft: '[', BracketRight: ']',
+    Comma: ',', Period: '.', Semicolon: ';', Quote: "'", Slash: '/', Backslash: '\\', Minus: '-', Equal: '=', Backquote: '`'
+  };
   const CAFE_HOSTS = new Set(['cafe.naver.com', 'm.cafe.naver.com']);
   const NOT_CAFE_URLS = new Set(['f-e', 'ca-fe', 'cafes', 'web', 'app']);
   // /f-e/cafes/1/articles/2, /ca-fe/cafes/..., /ca-fe/web/cafes/..., /ca-fe/app/cafes/...,
@@ -23,10 +32,23 @@
   const SHORT_PATH = /^\/([A-Za-z0-9_-]{2,40})\/(\d+)\/?$/;
   const DIGITS = /^\d{1,12}$/;
 
+  function isHotkeyCode(code) { return typeof code === 'string' && HOTKEY_CODE.test(code); }
+  function keyLabel(code) {
+    if (/^Key[A-Z]$/.test(code)) return code.slice(3);
+    if (/^Digit[0-9]$/.test(code)) return code.slice(5);
+    if (/^Numpad[0-9]$/.test(code)) return 'Num ' + code.slice(6);
+    return KEY_LABELS[code] || String(code || '');
+  }
+
   function settings(value) {
     const v = value && typeof value === 'object' ? value : {};
     const out = {};
-    for (const k of Object.keys(DEFAULTS)) out[k] = typeof v[k] === 'boolean' ? v[k] : DEFAULTS[k];
+    for (const [k, def] of Object.entries(DEFAULTS)) {
+      if (typeof def === 'boolean') out[k] = typeof v[k] === 'boolean' ? v[k] : def;
+      else out[k] = isHotkeyCode(v[k]) ? v[k] : def;
+    }
+    // One key cannot do both.
+    if (out.prevKey === out.nextKey) { out.prevKey = DEFAULTS.prevKey; out.nextKey = DEFAULTS.nextKey; }
     return out;
   }
 
@@ -129,6 +151,6 @@
 
   return {
     READ, ALIAS, SETTINGS, MAX_READS, DEFAULTS,
-    settings, cafeRef, parseArticle, isArticleView, storeKey, lookupKeys, invertAliases, fromStorage, pruneKeys
+    settings, isHotkeyCode, keyLabel, cafeRef, parseArticle, isArticleView, storeKey, lookupKeys, invertAliases, fromStorage, pruneKeys
   };
 });

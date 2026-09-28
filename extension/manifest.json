@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "카페 읽음 표시",
-  "version": "2.0.1",
+  "version": "2.1.0",
   "description": "네이버 카페 글 목록에서 이미 읽은 글을 흐리게 하고 '읽음' 배지로 표시합니다. 오래 열어둔 글의 좋아요 실패도 자동으로 처리합니다.",
   "minimum_chrome_version": "111",
   "permissions": ["storage", "contextMenus", "alarms"],
@@ -13,7 +13,7 @@
     "all_frames": true,
     "run_at": "document_idle",
     "css": ["content.css"],
-    "js": ["core.js", "content.js", "like.js"]
+    "js": ["core.js", "content.js", "like.js", "hotkeys.js"]
   }, {
     "matches": ["*://cafe.naver.com/*", "*://m.cafe.naver.com/*"],
     "all_frames": true,

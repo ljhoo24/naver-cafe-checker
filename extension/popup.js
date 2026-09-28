@@ -5,7 +5,11 @@
   const $ = id => document.getElementById(id);
   let settings = C.settings();
   let confirmTimer = null;
-  const KEYS = ['enabled', 'dim', 'badge', 'sync', 'likeRetry'];
+  const KEYS = ['enabled', 'dim', 'badge', 'sync', 'likeRetry', 'hotkeys'];
+  const HOTKEYS = { prevKey: 'nextKey', nextKey: 'prevKey' };
+  const HOTKEY_NAMES = { prevKey: '이전 글', nextKey: '다음 글' };
+  const KEY_HINT = '키 버튼을 누른 뒤 원하는 키를 누르세요. 한/영 상태와 관계없이 같은 자리의 키로 동작합니다.';
+  let capturing = null;
 
   function render(items) {
     const state = C.fromStorage(items);
@@ -14,9 +18,28 @@
     for (const k of KEYS) $(k).checked = settings[k];
     $('styles').disabled = !settings.enabled;
     $('likeBox').disabled = !settings.enabled;
+    $('hotkeyBox').disabled = !settings.enabled;
+    renderKeys();
     renderLike(items['like:last']);
     $('syncNow').disabled = !settings.sync;
     renderSync(items[S.STATUS]);
+  }
+  function renderKeys() {
+    for (const name of Object.keys(HOTKEYS)) {
+      const btn = $(name);
+      btn.disabled = !settings.hotkeys;
+      btn.classList.toggle('capturing', capturing === name);
+      btn.textContent = capturing === name ? '키 입력…' : C.keyLabel(settings[name]);
+    }
+  }
+  function keyHint(text, error = false) {
+    $('keyHint').textContent = text;
+    $('keyHint').classList.toggle('error', error);
+  }
+  function stopCapture() {
+    capturing = null;
+    keyHint(KEY_HINT);
+    renderKeys();
   }
   function ago(ts) {
     const s = Math.max(0, Math.round((Date.now() - ts) / 1000));
@@ -50,6 +73,30 @@
       catch { status('설정을 저장하지 못했습니다.'); }
     });
   }
+
+  for (const name of Object.keys(HOTKEYS)) {
+    $(name).addEventListener('click', () => {
+      capturing = capturing === name ? null : name;
+      keyHint(capturing ? `${HOTKEY_NAMES[name]}에 쓸 키를 누르세요. (Esc: 취소)` : KEY_HINT);
+      renderKeys();
+    });
+    $(name).addEventListener('blur', () => { if (capturing === name) stopCapture(); });
+  }
+  document.addEventListener('keydown', async event => {
+    if (!capturing) return;
+    event.preventDefault();
+    event.stopPropagation();
+    if (event.code === 'Escape') { stopCapture(); return; }
+    if (/^(Shift|Control|Alt|Meta|OS)/.test(event.code) || event.code === 'CapsLock') return;
+    const name = capturing;
+    const label = C.keyLabel(event.code) || event.key;
+    if (!C.isHotkeyCode(event.code)) { keyHint(`${label} 키는 쓸 수 없습니다. 영문·숫자·방향키·기호 키를 눌러 주세요.`, true); return; }
+    if (event.code === settings[HOTKEYS[name]]) { keyHint(`${label} 키는 이미 ${HOTKEY_NAMES[HOTKEYS[name]]}에 쓰고 있습니다.`, true); return; }
+    settings = { ...settings, [name]: event.code };
+    stopCapture();
+    try { await chrome.storage.local.set({ [C.SETTINGS]: settings }); keyHint(`${HOTKEY_NAMES[name]}: ${label} 키로 바꿨습니다.`); }
+    catch { keyHint('설정을 저장하지 못했습니다.', true); }
+  }, true);
 
   $('syncNow').addEventListener('click', async () => {
     $('syncNow').disabled = true;

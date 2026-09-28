@@ -47,6 +47,37 @@ test('like retry toggle and the last like error message', async t => {
   assert.equal(q.$('likeLast').hidden, true);
 });
 
+test('hotkeys: shows A/S, captures a new key, rejects duplicates and unusable keys, Esc cancels', async t => {
+  const p = await popup({});
+  t.after(() => p.dom.window.close());
+  const key = code => p.w.document.dispatchEvent(new p.w.KeyboardEvent('keydown', { code, key: code, bubbles: true, cancelable: true }));
+  assert.equal(p.$('prevKey').textContent, 'A');
+  assert.equal(p.$('nextKey').textContent, 'S');
+  p.$('prevKey').click();
+  assert.equal(p.$('prevKey').textContent, '키 입력…');
+  key('ShiftLeft');
+  assert.equal(p.$('prevKey').textContent, '키 입력…');
+  key('KeyQ');
+  await wait(20);
+  assert.equal(p.store.data.settings.prevKey, 'KeyQ');
+  assert.equal(p.$('prevKey').textContent, 'Q');
+  p.$('nextKey').click();
+  key('KeyQ');
+  await wait(20);
+  assert.match(p.$('keyHint').textContent, /이미 이전 글에/);
+  key('Enter');
+  assert.match(p.$('keyHint').textContent, /쓸 수 없습니다/);
+  key('Escape');
+  await wait(20);
+  assert.equal(p.$('nextKey').textContent, 'S');
+  assert.equal(p.store.data.settings.nextKey, 'KeyS');
+  p.$('hotkeys').checked = false;
+  p.$('hotkeys').dispatchEvent(new p.w.Event('change'));
+  await wait(20);
+  assert.equal(p.store.data.settings.hotkeys, false);
+  assert.equal(p.$('prevKey').disabled, true);
+});
+
 test('sync now asks the background and shows the result; errors are visible', async t => {
   const p = await popup({ 'sync:status': { at: 1, ok: false, error: 'QUOTA_BYTES quota exceeded' } });
   t.after(() => p.dom.window.close());

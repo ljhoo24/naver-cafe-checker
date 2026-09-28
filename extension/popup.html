@@ -17,6 +17,13 @@
       <label><input type="checkbox" id="dim"> 읽은 글 제목 흐리게</label>
       <label><input type="checkbox" id="badge"> 제목 앞에 <span class="badge">읽음</span> 배지</label>
     </fieldset>
+    <fieldset id="hotkeyBox">
+      <legend>단축키</legend>
+      <label><input type="checkbox" id="hotkeys"> 글을 보는 중 단축키로 이전/다음 글 이동</label>
+      <div class="key-row"><span>이전 글</span><button type="button" class="small key" id="prevKey">A</button></div>
+      <div class="key-row"><span>다음 글</span><button type="button" class="small key" id="nextKey">S</button></div>
+      <p class="hint" id="keyHint">키 버튼을 누른 뒤 원하는 키를 누르세요. 한/영 상태와 관계없이 같은 자리의 키로 동작합니다.</p>
+    </fieldset>
     <fieldset id="likeBox">
       <legend>좋아요</legend>
       <label><input type="checkbox" id="likeRetry"> 오래 열어둔 글에서 좋아요가 실패하면 새로고침 후 자동으로 다시 누르기</label>
