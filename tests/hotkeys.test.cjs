@@ -4,12 +4,13 @@ const { JSDOM } = require('jsdom');
 const { source, createStore, wait } = require('./helpers.cjs');
 
 // PC article view (ca-fe web-section app) top button bar.
+// Naver's 이전글 (btn_prev) is the newer article; 다음글 (btn_next) the older one.
 const BAR = (prev = true, next = true) => `
 <div class="ArticleTopBtns">
   <div class="left_area"><a href="#" class="BaseButton">수정</a></div>
   <div class="right_area">
-    ${prev ? '<a href="#" id="prev" class="BaseButton btn_prev skinGray"><span class="BaseButton__txt"> 이전글 </span></a>' : ''}
-    ${next ? '<a href="#" id="next" class="BaseButton btn_next skinGray"><span class="BaseButton__txt"> 다음글 </span></a>' : ''}
+    ${prev ? '<a href="#" id="naverPrev" class="BaseButton btn_prev skinGray"><span class="BaseButton__txt"> 이전글 </span></a>' : ''}
+    ${next ? '<a href="#" id="naverNext" class="BaseButton btn_next skinGray"><span class="BaseButton__txt"> 다음글 </span></a>' : ''}
     <a href="#" class="BaseButton">목록</a>
   </div>
 </div>
@@ -33,14 +34,14 @@ async function page(html, { store = createStore(), url = 'https://cafe.naver.com
   return { dom, w, store, clicks, press, doc: w.document };
 }
 
-test('A and S click Naver\'s own previous/next buttons, in any IME mode', async t => {
+test('A = older article (Naver 다음글), S = newer article (Naver 이전글), in any IME mode', async t => {
   const p = await page(BAR());
   t.after(() => p.dom.window.close());
   assert.equal(p.press('KeyA').defaultPrevented, true);
   p.press('KeyS');
   p.press('KeyA', { key: 'ㅁ' });
   p.press('KeyS', { key: 'ㄴ' });
-  assert.deepEqual(p.clicks, ['prev', 'next', 'prev', 'next']);
+  assert.deepEqual(p.clicks, ['naverNext', 'naverPrev', 'naverNext', 'naverPrev']);
 });
 
 test('ignored while typing, with modifiers, on key repeat and off article pages', async t => {
@@ -62,11 +63,11 @@ test('ignored while typing, with modifiers, on key repeat and off article pages'
 test('first/last article: a short notice instead of a click', async t => {
   const p = await page(BAR(true, false));
   t.after(() => p.dom.window.close());
-  assert.equal(p.press('KeyS').defaultPrevented, true);
+  assert.equal(p.press('KeyA').defaultPrevented, true);
   assert.deepEqual(p.clicks, []);
   const host = p.doc.querySelector('[data-ncc-hotkey-notice]');
   assert.ok(host);
-  assert.equal(host.shadowRoot.querySelector('div').textContent, '다음 글이 없습니다.');
+  assert.equal(host.shadowRoot.querySelector('div').textContent, '이전 글이 없습니다.');
 });
 
 test('key pressed in the outer cafe page reaches the article iframe', async t => {
@@ -77,7 +78,7 @@ test('key pressed in the outer cafe page reaches the article iframe', async t =>
   const innerClicks = [];
   inner.addEventListener('click', e => { const a = e.target.closest('a'); if (a) { innerClicks.push(a.id); e.preventDefault(); } });
   p.press('KeyS');
-  assert.deepEqual(innerClicks, ['next']);
+  assert.deepEqual(innerClicks, ['naverPrev']);
 });
 
 test('custom keys and the on/off setting apply immediately', async t => {
@@ -88,13 +89,13 @@ test('custom keys and the on/off setting apply immediately', async t => {
   p.press('KeyA');
   p.press('ArrowLeft', { key: 'ArrowLeft' });
   p.press('ArrowRight', { key: 'ArrowRight' });
-  assert.deepEqual(p.clicks, ['prev', 'next']);
+  assert.deepEqual(p.clicks, ['naverNext', 'naverPrev']);
   await store.local.set({ settings: { hotkeys: false } });
   p.press('KeyA');
-  assert.deepEqual(p.clicks, ['prev', 'next']);
+  assert.deepEqual(p.clicks, ['naverNext', 'naverPrev']);
   await store.local.set({ settings: { enabled: false } });
   p.press('KeyA');
-  assert.deepEqual(p.clicks, ['prev', 'next']);
+  assert.deepEqual(p.clicks, ['naverNext', 'naverPrev']);
 });
 
 test('settings validate key codes and never map one key to both directions', () => {

@@ -1,5 +1,5 @@
 // Keyboard shortcuts on an article page: previous / next article.
-// Clicks Naver's own "이전글" / "다음글" buttons so the order, board scope and
+// Clicks Naver's own "다음글" / "이전글" buttons so the order, board scope and
 // permission checks stay exactly Naver's.
 (() => {
   'use strict';
@@ -8,7 +8,10 @@
   const C = CafeChecker;
   // PC article view (ca-fe web-section app): .ArticleTopBtns .right_area holds the buttons.
   const BAR = '.ArticleTopBtns';
-  const BUTTONS = { prev: { selector: 'a.btn_prev', text: '이전글' }, next: { selector: 'a.btn_next', text: '다음글' } };
+  // Naver's "이전글" (up arrow) is the entry above in the newest-first list, i.e. a
+  // newer article. Users expect "previous" to mean the older one, so the
+  // directions map to the opposite labels.
+  const BUTTONS = { prev: { selector: 'a.btn_next', text: '다음글' }, next: { selector: 'a.btn_prev', text: '이전글' } };
   const EDITABLE = 'input, textarea, select, [contenteditable]:not([contenteditable="false"])';
   let settings = C.settings();
   let noticeTimer = null;
