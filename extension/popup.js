@@ -5,13 +5,16 @@
   const $ = id => document.getElementById(id);
   let settings = C.settings();
   let confirmTimer = null;
+  const KEYS = ['enabled', 'dim', 'badge', 'sync', 'likeRetry'];
 
   function render(items) {
     const state = C.fromStorage(items);
     settings = state.settings;
     $('count').textContent = state.reads.size.toLocaleString('ko-KR');
-    for (const k of ['enabled', 'dim', 'badge', 'sync']) $(k).checked = settings[k];
+    for (const k of KEYS) $(k).checked = settings[k];
     $('styles').disabled = !settings.enabled;
+    $('likeBox').disabled = !settings.enabled;
+    renderLike(items['like:last']);
     $('syncNow').disabled = !settings.sync;
     renderSync(items[S.STATUS]);
   }
@@ -30,10 +33,17 @@
     else if (st.ok) el.textContent = `${ago(st.at)} 동기화 · ${st.synced.toLocaleString('ko-KR')}개 공유`;
     else { el.textContent = '동기화 실패: ' + st.error; el.classList.add('error'); }
   }
+  // Shown so an unrecognized "page open too long" message can be reported and matched.
+  function renderLike(last) {
+    const el = $('likeLast');
+    el.hidden = !(last && last.message);
+    if (el.hidden) return;
+    el.textContent = `최근 좋아요 오류(${ago(last.at)}, ${last.handled ? '자동 처리함' : '처리 안 함'}): “${last.message}”`;
+  }
   async function refresh() { render(await chrome.storage.local.get(null)); }
   function status(text) { $('status').textContent = text; }
 
-  for (const k of ['enabled', 'dim', 'badge', 'sync']) {
+  for (const k of KEYS) {
     $(k).addEventListener('change', async () => {
       settings = { ...settings, [k]: $(k).checked };
       try { await chrome.storage.local.set({ [C.SETTINGS]: settings }); status(''); }

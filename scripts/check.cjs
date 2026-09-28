@@ -10,7 +10,7 @@ assert.equal(manifest.version, pkg.version, 'manifest and package versions diffe
 assert.deepEqual(manifest.permissions, ['storage', 'contextMenus', 'alarms']);
 assert.equal(manifest.host_permissions, undefined, 'no host permissions needed');
 const referenced = [manifest.background.service_worker, manifest.action.default_popup, ...Object.values(manifest.icons),
-  ...manifest.content_scripts.flatMap(script => [...script.js, ...script.css])];
+  ...manifest.content_scripts.flatMap(script => [...script.js, ...(script.css || [])])];
 for (const file of referenced) assert.ok(fs.existsSync(path.join(root, file)), `Missing ${file}`);
 for (const file of fs.readdirSync(root).filter(n => n.endsWith('.js'))) {
   execFileSync(process.execPath, ['--check', path.join(root, file)], { stdio: 'inherit' });

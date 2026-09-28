@@ -32,6 +32,21 @@ test('shows count, settings and sync status; toggles save', async t => {
   assert.equal(p.$('syncNow').disabled, true);
 });
 
+test('like retry toggle and the last like error message', async t => {
+  const p = await popup({ 'like:last': { message: '오래 열어둔 페이지입니다', handled: false, at: Date.now() } });
+  t.after(() => p.dom.window.close());
+  assert.equal(p.$('likeRetry').checked, true);
+  assert.equal(p.$('likeLast').hidden, false);
+  assert.match(p.$('likeLast').textContent, /처리 안 함.*오래 열어둔 페이지입니다/);
+  p.$('likeRetry').checked = false;
+  p.$('likeRetry').dispatchEvent(new p.w.Event('change'));
+  await wait(20);
+  assert.equal(p.store.data.settings.likeRetry, false);
+  const q = await popup({});
+  t.after(() => q.dom.window.close());
+  assert.equal(q.$('likeLast').hidden, true);
+});
+
 test('sync now asks the background and shows the result; errors are visible', async t => {
   const p = await popup({ 'sync:status': { at: 1, ok: false, error: 'QUOTA_BYTES quota exceeded' } });
   t.after(() => p.dom.window.close());
