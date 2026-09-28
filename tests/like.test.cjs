@@ -5,6 +5,9 @@ const { source, createStore, wait } = require('./helpers.cjs');
 
 const URL_ = 'https://cafe.naver.com/ca-fe/cafes/31780162/articles/648?menuid=1&fromNext=true';
 const EXPIRED_MSG = '페이지를 오래 열어두어 좋아요를 할 수 없습니다. 새로고침 후 다시 시도해주세요.';
+const BUSY_MSG = '이전 요청을 처리중입니다.';
+// Reloaded pages resume a like that failed a few seconds ago.
+const resumeIntent = (ago = 5000) => JSON.stringify({ cid: '31780162_648', wantOn: true, at: Date.now() - ago });
 const ARTICLE_LIKE = `
 <div class="ReactionLikeIt u_likeit_list_module _cafeReactionModule" data-sid="CAFE" data-cid="31780162_648" id="module">
   <a id="like" class="like_no u_likeit_list_btn _button" href="#" role="button" data-type="like" aria-pressed="false"><span class="u_ico _icon"></span></a>
@@ -25,10 +28,12 @@ const FAKE_PLUGIN = `
     const before = btn.getAttribute('aria-pressed') === 'true';
     btn.setAttribute('aria-pressed', String(!before)); btn.classList.toggle('on', !before);
     window.__likeRequests++;
+    // __fail: one message for every request, or a queue consumed per request.
+    const fail = Array.isArray(window.__fail) ? window.__fail.shift() : window.__fail;
     setTimeout(() => {
-      if (!window.__fail) return;
+      if (!fail) return;
       btn.setAttribute('aria-pressed', String(before)); btn.classList.toggle('on', before);
-      window.alert(window.__fail);
+      window.alert(fail);
     }, 30);
   });`;
 
@@ -69,8 +74,7 @@ test('expired like: alert suppressed, intent saved, page reloaded, diagnostics r
 });
 
 test('after reload the same like button is clicked once, when the plugin is ready', async t => {
-  const intent = JSON.stringify({ cid: '31780162_648', wantOn: true, at: Date.now() });
-  const p = await page({ session: { 'ncc:like-intent': intent }, loadedAfter: 400 });
+  const p = await page({ session: { 'ncc:like-intent': resumeIntent() }, loadedAfter: 400 });
   t.after(() => p.dom.window.close());
   await wait(100);
   assert.equal(p.w.__likeRequests, 0, 'waits for data-loaded');
@@ -80,12 +84,60 @@ test('after reload the same like button is clicked once, when the plugin is read
   assert.equal(p.get('commentLike').getAttribute('aria-pressed'), 'false');
   assert.equal(p.session('ncc:like-intent'), null);
   assert.equal(p.w.__scrolled, 'like');
-  assert.ok(p.w.document.querySelector('[data-ncc-ui]'), 'notice shown');
+  assert.equal(p.w.document.querySelector('[data-ncc-ui]'), null, 'no notice before the state holds');
+  await wait(3800);
+  assert.ok(p.w.document.querySelector('[data-ncc-ui]'), 'notice shown once confirmed');
+});
+
+test('resume waits until 3s after the failed request before clicking', async t => {
+  const p = await page({ session: { 'ncc:like-intent': resumeIntent(1000) } });
+  t.after(() => p.dom.window.close());
+  await wait(1200);
+  assert.equal(p.w.__likeRequests, 0);
+  await wait(1400);
+  assert.equal(p.w.__likeRequests, 1);
+});
+
+test('"previous request is processing" after reload: alert hidden, clicked again until it sticks', async t => {
+  const p = await page({ fail: [BUSY_MSG], session: { 'ncc:like-intent': resumeIntent() } });
+  t.after(() => p.dom.window.close());
+  await wait(400);
+  assert.equal(p.w.__likeRequests, 1);
+  assert.deepEqual(p.alerts, []);
+  assert.equal(p.get('like').getAttribute('aria-pressed'), 'false');
+  await wait(2200);
+  assert.equal(p.w.__likeRequests, 2);
+  assert.equal(p.get('like').getAttribute('aria-pressed'), 'true');
+  assert.equal(p.reloads.length, 0);
+  await wait(3800);
+  assert.ok(p.w.document.querySelector('[data-ncc-ui]'), 'success notice after retry');
+  assert.deepEqual(p.alerts, []);
+});
+
+test('"processing" retries stop after 3 attempts and the alert is shown; user clicks are retried too', async t => {
+  const p = await page({ fail: [BUSY_MSG, BUSY_MSG, BUSY_MSG, BUSY_MSG] });
+  t.after(() => p.dom.window.close());
+  p.get('like').click();
+  await wait(9500);
+  assert.equal(p.w.__likeRequests, 4);
+  assert.deepEqual(p.alerts, [BUSY_MSG]);
+  assert.equal(p.reloads.length, 0);
+  assert.equal(p.get('like').getAttribute('aria-pressed'), 'false');
+});
+
+test('a pending "processing" retry is skipped if the user already clicked again', async t => {
+  const p = await page({ fail: [BUSY_MSG] });
+  t.after(() => p.dom.window.close());
+  p.get('like').click();
+  await wait(100);
+  p.get('like').click();
+  await wait(2300);
+  assert.equal(p.w.__likeRequests, 2);
+  assert.equal(p.get('like').getAttribute('aria-pressed'), 'true');
 });
 
 test('if the automatic click fails again, the alert is shown and no reload loop happens', async t => {
-  const intent = JSON.stringify({ cid: '31780162_648', wantOn: true, at: Date.now() });
-  const p = await page({ fail: EXPIRED_MSG, session: { 'ncc:like-intent': intent } });
+  const p = await page({ fail: EXPIRED_MSG, session: { 'ncc:like-intent': resumeIntent() } });
   t.after(() => p.dom.window.close());
   await wait(400);
   assert.equal(p.w.__likeRequests, 1);
@@ -95,7 +147,7 @@ test('if the automatic click fails again, the alert is shown and no reload loop 
 });
 
 test('already liked after reload: nothing is clicked (no accidental unlike)', async t => {
-  const intent = JSON.stringify({ cid: '31780162_648', wantOn: true, at: Date.now() });
+  const intent = resumeIntent();
   const liked = ARTICLE_LIKE.replace('id="like" class="like_no u_likeit_list_btn _button"', 'id="like" class="like_no u_likeit_list_btn _button on"').replace('data-type="like" aria-pressed="false"><span', 'data-type="like" aria-pressed="true"><span');
   const p = await page({ session: { 'ncc:like-intent': intent }, html: liked });
   t.after(() => p.dom.window.close());

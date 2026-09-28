@@ -12,6 +12,12 @@
   const INTENT_MAX_AGE_MS = 2 * 60 * 1000;
   const WAIT_MS = 20000;
   const POLL_MS = 300;
+  // The failed request stays locked on Naver's side for a moment ("이전 요청을 처리중입니다").
+  const MIN_DELAY_MS = 3000;
+  // The plugin shows the new state before the server answers, so success is only
+  // reported once it has held for a while (a failure reverts it within ~3s).
+  const CONFIRM_STABLE_MS = 3500;
+  const CONFIRM_MAX_MS = 20000;
   let settings = C.settings();
   let timer = null;
 
@@ -60,9 +66,10 @@
     const intent = readIntent();
     if (!intent || !active()) return;
     const btn = findButton(intent.cid);
-    if (!btn) {
+    const early = Date.now() - intent.at < MIN_DELAY_MS;
+    if (!btn || early) {
       // Another frame (or a slow render) may own the button; keep waiting until the deadline.
-      if (Date.now() < deadline) timer = setTimeout(() => tryResume(deadline), POLL_MS);
+      if (Date.now() < deadline || early) timer = setTimeout(() => tryResume(deadline), POLL_MS);
       return;
     }
     try { sessionStorage.removeItem(INTENT); } catch { /* ignore */ }
@@ -73,7 +80,20 @@
     }
     try { sessionStorage.setItem(AUTO, JSON.stringify({ cid: intent.cid, at: Date.now() })); } catch { /* ignore */ }
     btn.click();
-    notice(btn, intent.wantOn ? '오래 열린 페이지라 새로고침 후 좋아요를 눌렀습니다.' : '오래 열린 페이지라 새로고침 후 좋아요를 취소했습니다.');
+    confirm(intent, Date.now());
+  }
+  // like-hook.js may click again on a "still processing" answer; report once the state sticks.
+  function confirm(intent, start, since = null) {
+    const btn = findButton(intent.cid);
+    const now = Date.now();
+    if (!btn || now - start > CONFIRM_MAX_MS) return;
+    if (pressed(btn) !== intent.wantOn) since = null;
+    else if (since === null) since = now;
+    else if (now - since >= CONFIRM_STABLE_MS) {
+      notice(btn, intent.wantOn ? '오래 열린 페이지라 새로고침 후 좋아요를 눌렀습니다.' : '오래 열린 페이지라 새로고침 후 좋아요를 취소했습니다.');
+      return;
+    }
+    setTimeout(() => confirm(intent, start, since), POLL_MS);
   }
 
   // Diagnostics for the popup: the last alert shown right after a like click.
