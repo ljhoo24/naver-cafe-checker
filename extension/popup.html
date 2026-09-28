@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <title>카페 읽음 표시</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header>
+    <h1>카페 읽음 표시</h1>
+    <label class="switch" title="사용"><input type="checkbox" id="enabled"><span></span></label>
+  </header>
+  <main>
+    <p class="count"><b id="count">0</b>개 글을 읽음으로 기록했습니다.</p>
+    <fieldset id="styles">
+      <legend>표시 방식</legend>
+      <label><input type="checkbox" id="dim"> 읽은 글 제목 흐리게</label>
+      <label><input type="checkbox" id="badge"> 제목 앞에 <span class="badge">읽음</span> 배지</label>
+    </fieldset>
+    <p class="hint">글 링크에서 우클릭하면 읽음 표시를 되돌리거나 직접 표시할 수 있습니다.</p>
+    <button type="button" id="clear">읽음 기록 전체 삭제</button>
+    <p id="status" role="status"></p>
+  </main>
+  <script src="core.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

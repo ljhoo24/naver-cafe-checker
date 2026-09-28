@@ -1,0 +1,31 @@
+/* Read article links. Only attributes are added to the site's own elements, so
+   Naver's React/Vue renderers never see foreign DOM nodes. */
+html[data-ncc-dim] a[data-ncc-read="title"],
+html[data-ncc-dim] a[data-ncc-read="title"] *,
+html[data-ncc-dim] a[data-ncc-read="extra"],
+html[data-ncc-dim] a[data-ncc-read="extra"] * {
+  color: #a0a0a0 !important;
+}
+html[data-ncc-dim] a[data-ncc-read="media"] img,
+html[data-ncc-dim] a[data-ncc-read="media"] picture,
+html[data-ncc-dim] a[data-ncc-read="media"] video {
+  opacity: 0.45 !important;
+}
+html[data-ncc-badge] a[data-ncc-read="title"]::before {
+  content: "읽음";
+  display: inline-block;
+  margin-right: 5px;
+  padding: 0 5px;
+  border: 1px solid #b7dfc0;
+  border-radius: 3px;
+  background: #eef8f0;
+  color: #2f8a45 !important;
+  font-size: 11px;
+  font-weight: 600;
+  font-style: normal;
+  line-height: 16px;
+  vertical-align: 1px;
+  text-decoration: none;
+  text-indent: 0;
+  white-space: nowrap;
+}
