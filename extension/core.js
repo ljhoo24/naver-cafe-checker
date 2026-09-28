@@ -3,7 +3,7 @@
 //   r:c:<cafeId>:<articleId> -> timestamp   read article, cafe known by numeric id
 //   r:u:<cafeUrl>:<articleId> -> timestamp  read article, cafe known only by its url name
 //   a:<cafeUrl> -> cafeId                    learned cafe url name -> numeric id
-//   settings -> { enabled, dim, badge }
+//   settings -> { enabled, dim, badge, sync }
 (function (root, factory) {
   const api = factory();
   if (typeof module === 'object' && module.exports) module.exports = api;
@@ -14,7 +14,7 @@
   const ALIAS = 'a:';
   const SETTINGS = 'settings';
   const MAX_READS = 50000;
-  const DEFAULTS = Object.freeze({ enabled: true, dim: true, badge: true });
+  const DEFAULTS = Object.freeze({ enabled: true, dim: true, badge: true, sync: true });
   const CAFE_HOSTS = new Set(['cafe.naver.com', 'm.cafe.naver.com']);
   const NOT_CAFE_URLS = new Set(['f-e', 'ca-fe', 'cafes', 'web', 'app']);
   // /f-e/cafes/1/articles/2, /ca-fe/cafes/..., /ca-fe/web/cafes/..., /ca-fe/app/cafes/...,

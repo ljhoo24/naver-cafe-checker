@@ -7,7 +7,7 @@ const manifest = JSON.parse(fs.readFileSync(path.join(root, 'manifest.json'), 'u
 const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '../package.json'), 'utf8'));
 assert.equal(manifest.manifest_version, 3);
 assert.equal(manifest.version, pkg.version, 'manifest and package versions differ');
-assert.deepEqual(manifest.permissions, ['storage', 'contextMenus']);
+assert.deepEqual(manifest.permissions, ['storage', 'contextMenus', 'alarms']);
 assert.equal(manifest.host_permissions, undefined, 'no host permissions needed');
 const referenced = [manifest.background.service_worker, manifest.action.default_popup, ...Object.values(manifest.icons),
   ...manifest.content_scripts.flatMap(script => [...script.js, ...script.css])];

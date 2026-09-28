@@ -58,6 +58,32 @@ test('opening an article page records it; SPA navigation is detected', async t =
   assert.equal(Object.keys(store.data).filter(k => k.startsWith('r:')).length, 2);
 });
 
+test('article page: buttons pointing at the open article get no mark, other articles do', async t => {
+  const store = createStore({ 'r:c:31780162:647': 1 });
+  const h = await page(`
+    <div class="ArticleContentBox">
+      <div class="WriterInfo"><a id="nick" href="#" role="button">badpixel134</a><a id="chat" href="#">1:1 채팅</a></div>
+      <a id="cmtTop" href="?commentFocus=true">댓글 1</a><a id="url" href="javascript:void(0)">URL 복사</a>
+      <a id="like" href="">좋아요 4</a>
+      <a id="self" href="https://cafe.naver.com/f-e/cafes/31780162/articles/648?boardtype=L">공유</a>
+      <a id="report" href="/f-e/cafes/31780162/articles/648/report">신고</a>
+      <a id="order" href="/f-e/cafes/31780162/articles/648?commentOrder=new">최신순</a>
+      <a id="short" href="https://cafe.naver.com/newsickminza/648">짧은 주소</a>
+    </div>
+    <ul class="RelatedArticlesList"><li class="list_item"><a id="other" href="/f-e/cafes/31780162/articles/647">이전 글</a></li></ul>`,
+  { store, url: 'https://cafe.naver.com/f-e/cafes/31780162/articles/648?boardtype=L' });
+  t.after(() => h.dom.window.close());
+  await store.local.set({ 'a:newsickminza': '31780162' });
+  await h.settle();
+  assert.ok(store.data['r:c:31780162:648']);
+  assert.deepEqual([...h.doc.querySelectorAll('[data-ncc-read]')].map(a => a.id), ['other']);
+  // Moving to the next article: the previous one is now an ordinary read link.
+  h.w.history.pushState({}, '', '/f-e/cafes/31780162/articles/647');
+  await wait(800);
+  assert.equal(h.get('self').getAttribute('data-ncc-read'), 'title');
+  assert.equal(h.get('other').hasAttribute('data-ncc-read'), false);
+});
+
 test('rows added or changed later are re-evaluated', async t => {
   const store = createStore({ 'r:c:31780162:9': 1 });
   const h = await page('<ul id="list"></ul>', { store });
@@ -81,7 +107,8 @@ test('legacy shell learns cafe url name, so short and id links match', async t =
   const list = await page('<a id="long" href="/f-e/cafes/31780162/articles/700">긴 주소 글</a>', { store });
   t.after(() => list.dom.window.close());
   assert.equal(list.get('long').getAttribute('data-ncc-read'), 'title');
-  assert.equal(h.get('short').getAttribute('data-ncc-read'), 'title');
+  // The shell shows article 700 itself, so its own link is not a list entry.
+  assert.equal(h.get('short').hasAttribute('data-ncc-read'), false);
 });
 
 test('new PC frame learns alias from cafe home link; old url-name records still match', async t => {

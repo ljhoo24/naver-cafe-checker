@@ -5,11 +5,11 @@ const source = name => fs.readFileSync(path.join(__dirname, '../extension', name
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 // One fake chrome.storage.local shared by every window, like frames/tabs of one profile.
-function createStore(initial = {}) {
+function createStore(initial = {}, area = 'local') {
   const data = { ...initial };
   const listeners = new Set();
   const clone = v => (v === undefined ? undefined : JSON.parse(JSON.stringify(v)));
-  function emit(changes) { if (Object.keys(changes).length) for (const fn of listeners) fn(clone(changes), 'local'); }
+  function emit(changes) { if (Object.keys(changes).length) for (const fn of listeners) fn(clone(changes), area); }
   const local = {
     async get(keys) {
       if (keys === null || keys === undefined) return clone(data);

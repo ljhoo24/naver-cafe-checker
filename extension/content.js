@@ -18,6 +18,8 @@
   let lastHref = '';
   let scanTimer = null;
   let aliasLearned = false;
+  let currentArticle = null;
+  // Keyed by raw href, resolved against the current URL; cleared on navigation.
   const parsed = new Map();
 
   function alive() {
@@ -33,6 +35,21 @@
       parsed.set(href, C.parseArticle(href, location.href));
     }
     return parsed.get(href);
+  }
+  function sameArticle(a, b) {
+    if (!a || !b || a.articleId !== b.articleId) return false;
+    const idA = a.cafeId || aliases[a.cafeUrl];
+    const idB = b.cafeId || aliases[b.cafeUrl];
+    return (!!idA && idA === idB) || (!!a.cafeUrl && a.cafeUrl === b.cafeUrl);
+  }
+  // Article a list link points to. Buttons on an article page (like, comments,
+  // share, author, sort order) use "#" or the page's own URL; those are not list
+  // entries, so links to the article being viewed are ignored.
+  function articleOf(a) {
+    const raw = (a.getAttribute('href') || '').trim();
+    if (!raw || raw[0] === '#' || /^javascript:/i.test(raw)) return null;
+    const article = parse(raw);
+    return article && !sameArticle(article, currentArticle) ? article : null;
   }
   function isRead(article) {
     return C.lookupKeys(article, aliases, urlsById).some(k => reads.has(k));
@@ -130,7 +147,7 @@
     if (settings.enabled) learnAliasFromPage();
     const badged = new WeakMap();
     for (const a of document.querySelectorAll('a[href]')) {
-      const article = settings.enabled ? parse(a.getAttribute('href')) : null;
+      const article = settings.enabled ? articleOf(a) : null;
       let value = null;
       if (article && C.isArticleView(article) && isRead(article)) {
         value = kind(a);
@@ -155,16 +172,19 @@
   function checkLocation() {
     if (location.href === lastHref) return;
     lastHref = location.href;
+    parsed.clear();
+    const article = C.parseArticle(location.href);
+    currentArticle = C.isArticleView(article) ? article : null;
+    schedule();
     if (!settings.enabled) return;
     learnAliasFromPage();
-    const article = C.parseArticle(location.href);
-    if (article) markRead(article);
+    if (currentArticle) markRead(currentArticle);
   }
   function onClick(event) {
     if (event.type === 'auxclick' && event.button !== 1) return;
     const a = event.target instanceof Element && event.target.closest('a[href]');
     if (!a) return;
-    const article = parse(a.getAttribute('href'));
+    const article = articleOf(a);
     if (article && article.sub === '') markRead(article);
   }
 

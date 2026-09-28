@@ -17,11 +17,18 @@
       <label><input type="checkbox" id="dim"> 읽은 글 제목 흐리게</label>
       <label><input type="checkbox" id="badge"> 제목 앞에 <span class="badge">읽음</span> 배지</label>
     </fieldset>
+    <fieldset id="syncBox">
+      <legend>Google 계정 동기화</legend>
+      <label><input type="checkbox" id="sync"> 같은 Google 계정의 Chrome끼리 읽음 기록 공유</label>
+      <div class="sync-row"><span id="syncStatus">아직 동기화하지 않았습니다.</span><button type="button" id="syncNow" class="small">지금 동기화</button></div>
+      <p class="hint">Chrome에 로그인하고 동기화 항목의 <b>확장 프로그램</b>이 켜져 있어야 합니다. 최근 기록 약 2만 개까지 공유됩니다.</p>
+    </fieldset>
     <p class="hint">글 링크에서 우클릭하면 읽음 표시를 되돌리거나 직접 표시할 수 있습니다.</p>
     <button type="button" id="clear">읽음 기록 전체 삭제</button>
     <p id="status" role="status"></p>
   </main>
   <script src="core.js"></script>
+  <script src="sync.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>
