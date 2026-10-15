@@ -128,3 +128,18 @@ test('visit gap follows the setting (10 minutes: a 15-minute break starts a new 
   assert.equal(normal.boundary(), null, 'rows 105..102 are all above mark 101: no seen row on this page');
   assert.equal(normal.store.data['v:1:2'].mark, 101);
 });
+
+test('back to the same list URL in the SPA after a long break: visit re-evaluated', async t => {
+  const store = createStore({ 'v:1:2': { mark: 102, latest: 105, at: Date.now() - 5 * 60 * 1000, markAt: Date.now() - 3 * HOUR } });
+  const p = await page(TABLE([105, 104, 103, 102, 101]), { store });
+  t.after(() => p.dom.window.close());
+  assert.equal(p.boundary().id, 'r102', 'same visit');
+  // Time passes: nothing happened in the cafe for two hours.
+  await store.local.set({ 'v:1:2': { ...store.data['v:1:2'], at: Date.now() - 2 * HOUR }, 'v:1': Date.now() - 2 * HOUR });
+  p.w.history.pushState({}, '', '/f-e/cafes/1/articles/105');
+  await wait(800);
+  p.w.history.pushState({}, '', '/f-e/cafes/1/menus/2?viewType=L&page=1');
+  await wait(1000);
+  assert.equal(store.data['v:1:2'].mark, 105);
+  assert.equal(p.boundary(), null, 'everything on the page was seen in the last visit');
+});

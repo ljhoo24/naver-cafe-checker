@@ -130,8 +130,20 @@
   chrome.storage.local.get(C.SETTINGS).then(items => {
     settings = C.settings(items[C.SETTINGS]);
     new MutationObserver(schedule).observe(document.documentElement, { childList: true, subtree: true });
-    // SPA routing changes the URL without a page load.
-    setInterval(() => { if (alive() && location.href !== visitedHref && board(location.href)) schedule(); }, 700);
+    // SPA routing changes the URL without a page load. Leaving the list (to an
+    // article) forgets it, so coming back to the same list URL is a new look at
+    // the board and may start a new visit.
+    setInterval(() => {
+      if (!alive()) return;
+      if (!board(location.href)) visitedHref = '';
+      else if (location.href !== visitedHref) schedule();
+    }, 700);
+    // A background tab brought back after a long break is a new look too.
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState !== 'visible') return;
+      visitedHref = '';
+      schedule();
+    });
     schedule();
   }).catch(() => {});
 })();
