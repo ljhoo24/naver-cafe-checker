@@ -3,8 +3,10 @@
 //   r:c:<cafeId>:<articleId> -> timestamp   read article, cafe known by numeric id
 //   r:u:<cafeUrl>:<articleId> -> timestamp  read article, cafe known only by its url name
 //   a:<cafeUrl> -> cafeId                    learned cafe url name -> numeric id
-//   settings -> { enabled, dim, badge, sync, likeRetry, hotkeys, prevKey, nextKey }
-//   (prevKey/nextKey are KeyboardEvent.code values, so they work in any IME mode)
+//   v:<cafeId>:<menuId> -> { mark, latest, at, markAt }  board visit for the "new since" divider
+//   v:<cafeId> -> timestamp                  last activity in the cafe (keeps a visit going)
+//   settings -> { enabled, dim, badge, sync, likeRetry, newMark, hotkeys, <hotkey names> }
+//   (hotkeys are KeyboardEvent.code values, so they work in any IME mode; '' = off)
 (function (root, factory) {
   const api = factory();
   if (typeof module === 'object' && module.exports) module.exports = api;
@@ -15,9 +17,21 @@
   const ALIAS = 'a:';
   const SETTINGS = 'settings';
   const MAX_READS = 50000;
+  const VISIT = 'v:';
+  // Shortcuts per screen. A key may repeat across screens but not within one.
+  const HOTKEYS = Object.freeze([
+    { name: 'prevKey', screen: 'article', label: '이전 글', key: 'KeyA' },
+    { name: 'nextKey', screen: 'article', label: '다음 글', key: 'KeyS' },
+    { name: 'likeKey', screen: 'article', label: '좋아요', key: 'KeyL' },
+    { name: 'commentKey', screen: 'article', label: '댓글 쓰기', key: 'KeyC' },
+    { name: 'listKey', screen: 'article', label: '목록으로', key: 'KeyQ' },
+    { name: 'prevPageKey', screen: 'list', label: '이전 페이지', key: 'KeyA' },
+    { name: 'nextPageKey', screen: 'list', label: '다음 페이지', key: 'KeyS' },
+    { name: 'unreadKey', screen: 'list', label: '안 읽은 첫 글', key: 'KeyN' }
+  ].map(Object.freeze));
   const DEFAULTS = Object.freeze({
-    enabled: true, dim: true, badge: true, sync: true, likeRetry: true,
-    hotkeys: true, prevKey: 'KeyA', nextKey: 'KeyS'
+    enabled: true, dim: true, badge: true, sync: true, likeRetry: true, newMark: true, hotkeys: true,
+    ...Object.fromEntries(HOTKEYS.map(h => [h.name, h.key]))
   });
   const HOTKEY_CODE = /^(?:Key[A-Z]|Digit[0-9]|Numpad[0-9]|Arrow(?:Left|Right|Up|Down)|BracketLeft|BracketRight|Comma|Period|Semicolon|Quote|Slash|Backslash|Minus|Equal|Backquote)$/;
   const KEY_LABELS = {
@@ -45,10 +59,15 @@
     const out = {};
     for (const [k, def] of Object.entries(DEFAULTS)) {
       if (typeof def === 'boolean') out[k] = typeof v[k] === 'boolean' ? v[k] : def;
-      else out[k] = isHotkeyCode(v[k]) ? v[k] : def;
+      else out[k] = v[k] === '' || isHotkeyCode(v[k]) ? v[k] : def;
     }
-    // One key cannot do both.
-    if (out.prevKey === out.nextKey) { out.prevKey = DEFAULTS.prevKey; out.nextKey = DEFAULTS.nextKey; }
+    // One key cannot do two things on the same screen; the later one is turned off.
+    const used = new Set();
+    for (const h of HOTKEYS) {
+      const id = h.screen + ':' + out[h.name];
+      if (out[h.name] && used.has(id)) out[h.name] = '';
+      used.add(id);
+    }
     return out;
   }
 
@@ -150,7 +169,7 @@
   }
 
   return {
-    READ, ALIAS, SETTINGS, MAX_READS, DEFAULTS,
+    READ, ALIAS, VISIT, SETTINGS, HOTKEYS, MAX_READS, DEFAULTS,
     settings, isHotkeyCode, keyLabel, cafeRef, parseArticle, isArticleView, storeKey, lookupKeys, invertAliases, fromStorage, pruneKeys
   };
 });

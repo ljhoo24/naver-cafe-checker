@@ -5,11 +5,27 @@
   const $ = id => document.getElementById(id);
   let settings = C.settings();
   let confirmTimer = null;
-  const KEYS = ['enabled', 'dim', 'badge', 'sync', 'likeRetry', 'hotkeys'];
-  const HOTKEYS = { prevKey: 'nextKey', nextKey: 'prevKey' };
-  const HOTKEY_NAMES = { prevKey: '이전 글', nextKey: '다음 글' };
-  const KEY_HINT = '키 버튼을 누른 뒤 원하는 키를 누르세요. 한/영 상태와 관계없이 같은 자리의 키로 동작합니다.';
+  const KEYS = ['enabled', 'dim', 'badge', 'newMark', 'sync', 'likeRetry', 'hotkeys'];
+  const HOTKEYS = Object.fromEntries(C.HOTKEYS.map(h => [h.name, h]));
+  const SCREEN_NAMES = { article: '글 화면', list: '목록 화면' };
+  const KEY_HINT = '키 버튼을 누른 뒤 원하는 키를 누르세요 (Backspace: 끄기). 한/영 상태와 관계없이 같은 자리의 키로 동작합니다.';
   let capturing = null;
+
+  // One button per shortcut, generated from the shared definition.
+  for (const h of C.HOTKEYS) {
+    const row = document.createElement('div');
+    row.className = 'key-row';
+    const name = document.createElement('span');
+    name.textContent = h.label;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'small key';
+    btn.id = h.name;
+    btn.title = `${SCREEN_NAMES[h.screen]} · ${h.label} 단축키 바꾸기`;
+    row.append(name, btn);
+    document.querySelector(`.key-group[data-screen="${h.screen}"] .key-grid`).append(row);
+  }
+  $('keyHint').textContent = KEY_HINT;
 
   function render(items) {
     const state = C.fromStorage(items);
@@ -29,7 +45,8 @@
       const btn = $(name);
       btn.disabled = !settings.hotkeys;
       btn.classList.toggle('capturing', capturing === name);
-      btn.textContent = capturing === name ? '키 입력…' : C.keyLabel(settings[name]);
+      btn.classList.toggle('off', !settings[name] && capturing !== name);
+      btn.textContent = capturing === name ? '입력…' : (settings[name] ? C.keyLabel(settings[name]) : '끔');
     }
   }
   function keyHint(text, error = false) {
@@ -77,7 +94,7 @@
   for (const name of Object.keys(HOTKEYS)) {
     $(name).addEventListener('click', () => {
       capturing = capturing === name ? null : name;
-      keyHint(capturing ? `${HOTKEY_NAMES[name]}에 쓸 키를 누르세요. (Esc: 취소)` : KEY_HINT);
+      keyHint(capturing ? `${SCREEN_NAMES[HOTKEYS[name].screen]} · ${HOTKEYS[name].label}에 쓸 키를 누르세요. (Esc: 취소, Backspace: 끄기)` : KEY_HINT);
       renderKeys();
     });
     $(name).addEventListener('blur', () => { if (capturing === name) stopCapture(); });
@@ -89,13 +106,19 @@
     if (event.code === 'Escape') { stopCapture(); return; }
     if (/^(Shift|Control|Alt|Meta|OS)/.test(event.code) || event.code === 'CapsLock') return;
     const name = capturing;
+    const hotkey = HOTKEYS[name];
+    const off = event.code === 'Backspace' || event.code === 'Delete';
     const label = C.keyLabel(event.code) || event.key;
-    if (!C.isHotkeyCode(event.code)) { keyHint(`${label} 키는 쓸 수 없습니다. 영문·숫자·방향키·기호 키를 눌러 주세요.`, true); return; }
-    if (event.code === settings[HOTKEYS[name]]) { keyHint(`${label} 키는 이미 ${HOTKEY_NAMES[HOTKEYS[name]]}에 쓰고 있습니다.`, true); return; }
-    settings = { ...settings, [name]: event.code };
+    if (!off && !C.isHotkeyCode(event.code)) { keyHint(`${label} 키는 쓸 수 없습니다. 영문·숫자·방향키·기호 키를 눌러 주세요.`, true); return; }
+    // The same key may serve another screen, but not two actions on one screen.
+    const clash = !off && C.HOTKEYS.find(h => h.name !== name && h.screen === hotkey.screen && settings[h.name] === event.code);
+    if (clash) { keyHint(`${label} 키는 이미 ${SCREEN_NAMES[clash.screen]} '${clash.label}' 단축키로 쓰고 있습니다.`, true); return; }
+    settings = { ...settings, [name]: off ? '' : event.code };
     stopCapture();
-    try { await chrome.storage.local.set({ [C.SETTINGS]: settings }); keyHint(`${HOTKEY_NAMES[name]}: ${label} 키로 바꿨습니다.`); }
-    catch { keyHint('설정을 저장하지 못했습니다.', true); }
+    try {
+      await chrome.storage.local.set({ [C.SETTINGS]: settings });
+      keyHint(off ? `${hotkey.label} 단축키를 껐습니다.` : `${hotkey.label}: ${label} 키로 바꿨습니다.`);
+    } catch { keyHint('설정을 저장하지 못했습니다.', true); }
   }, true);
 
   $('syncNow').addEventListener('click', async () => {
