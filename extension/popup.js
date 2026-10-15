@@ -33,6 +33,8 @@
     $('count').textContent = state.reads.size.toLocaleString('ko-KR');
     for (const k of KEYS) $(k).checked = settings[k];
     $('styles').disabled = !settings.enabled;
+    $('visitGap').value = String(settings.visitGap);
+    $('visitGap').disabled = !settings.newMark;
     $('likeBox').disabled = !settings.enabled;
     $('hotkeyBox').disabled = !settings.enabled;
     renderKeys();
@@ -90,6 +92,12 @@
       catch { status('설정을 저장하지 못했습니다.'); }
     });
   }
+
+  $('visitGap').addEventListener('change', async () => {
+    settings = { ...settings, visitGap: Number($('visitGap').value) };
+    try { await chrome.storage.local.set({ [C.SETTINGS]: settings }); status(''); }
+    catch { status('설정을 저장하지 못했습니다.'); }
+  });
 
   for (const name of Object.keys(HOTKEYS)) {
     $(name).addEventListener('click', () => {

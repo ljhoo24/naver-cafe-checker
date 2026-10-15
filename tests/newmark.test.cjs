@@ -116,3 +116,15 @@ test('activity on an article page keeps the cafe visit alive (throttled)', async
   p.w.dispatchEvent(new p.w.Event('keydown'));
   assert.equal(store.data['v:1'], first, 'at most once a minute');
 });
+
+test('visit gap follows the setting (10 minutes: a 15-minute break starts a new visit)', async t => {
+  const rec = () => ({ 'v:1:2': { mark: 101, latest: 103, at: Date.now() - 15 * 60 * 1000, markAt: Date.now() - HOUR } });
+  const short = await page(TABLE([105, 104, 103, 102]), { store: createStore({ ...rec(), settings: { visitGap: 10 } }) });
+  t.after(() => short.dom.window.close());
+  assert.deepEqual(short.boundary(), { id: 'r103', label: '▲ 새 글 2개 · 지난 방문 15분 전' });
+  // Default 30 minutes: still the same visit, the old divider stays.
+  const normal = await page(TABLE([105, 104, 103, 102]), { store: createStore(rec()) });
+  t.after(() => normal.dom.window.close());
+  assert.equal(normal.boundary(), null, 'rows 105..102 are all above mark 101: no seen row on this page');
+  assert.equal(normal.store.data['v:1:2'].mark, 101);
+});

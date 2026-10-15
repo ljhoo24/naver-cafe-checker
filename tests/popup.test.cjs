@@ -92,6 +92,21 @@ test('hotkeys: shows A/S, captures a new key, rejects duplicates and unusable ke
   assert.equal(p.$('prevKey').disabled, true);
 });
 
+test('visit gap select saves 5/10/30/60 minutes and follows the new-mark toggle', async t => {
+  const p = await popup({});
+  t.after(() => p.dom.window.close());
+  assert.equal(p.$('visitGap').value, '30');
+  p.$('visitGap').value = '10';
+  p.$('visitGap').dispatchEvent(new p.w.Event('change'));
+  await wait(20);
+  assert.equal(p.store.data.settings.visitGap, 10);
+  p.$('newMark').checked = false;
+  p.$('newMark').dispatchEvent(new p.w.Event('change'));
+  await wait(20);
+  assert.equal(p.$('visitGap').disabled, true);
+  assert.equal(p.$('visitGap').value, '10');
+});
+
 test('sync now asks the background and shows the result; errors are visible', async t => {
   const p = await popup({ 'sync:status': { at: 1, ok: false, error: 'QUOTA_BYTES quota exceeded' } });
   t.after(() => p.dom.window.close());

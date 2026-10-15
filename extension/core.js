@@ -5,7 +5,8 @@
 //   a:<cafeUrl> -> cafeId                    learned cafe url name -> numeric id
 //   v:<cafeId>:<menuId> -> { mark, latest, at, markAt }  board visit for the "new since" divider
 //   v:<cafeId> -> timestamp                  last activity in the cafe (keeps a visit going)
-//   settings -> { enabled, dim, badge, sync, likeRetry, newMark, hotkeys, <hotkey names> }
+//   settings -> { enabled, dim, badge, sync, likeRetry, newMark, visitGap, hotkeys, <hotkey names> }
+//   (visitGap: minutes without cafe activity before a board visit counts as new)
 //   (hotkeys are KeyboardEvent.code values, so they work in any IME mode; '' = off)
 (function (root, factory) {
   const api = factory();
@@ -18,6 +19,7 @@
   const SETTINGS = 'settings';
   const MAX_READS = 50000;
   const VISIT = 'v:';
+  const VISIT_GAPS = Object.freeze([5, 10, 30, 60]);
   // Shortcuts per screen. A key may repeat across screens but not within one.
   const HOTKEYS = Object.freeze([
     { name: 'prevKey', screen: 'article', label: '이전 글', key: 'KeyA' },
@@ -30,7 +32,7 @@
     { name: 'unreadKey', screen: 'list', label: '안 읽은 첫 글', key: 'KeyN' }
   ].map(Object.freeze));
   const DEFAULTS = Object.freeze({
-    enabled: true, dim: true, badge: true, sync: true, likeRetry: true, newMark: true, hotkeys: true,
+    enabled: true, dim: true, badge: true, sync: true, likeRetry: true, newMark: true, visitGap: 30, hotkeys: true,
     ...Object.fromEntries(HOTKEYS.map(h => [h.name, h.key]))
   });
   const HOTKEY_CODE = /^(?:Key[A-Z]|Digit[0-9]|Numpad[0-9]|Arrow(?:Left|Right|Up|Down)|BracketLeft|BracketRight|Comma|Period|Semicolon|Quote|Slash|Backslash|Minus|Equal|Backquote)$/;
@@ -59,6 +61,7 @@
     const out = {};
     for (const [k, def] of Object.entries(DEFAULTS)) {
       if (typeof def === 'boolean') out[k] = typeof v[k] === 'boolean' ? v[k] : def;
+      else if (typeof def === 'number') out[k] = VISIT_GAPS.includes(v[k]) ? v[k] : def;
       else out[k] = v[k] === '' || isHotkeyCode(v[k]) ? v[k] : def;
     }
     // One key cannot do two things on the same screen; the later one is turned off.
@@ -169,7 +172,7 @@
   }
 
   return {
-    READ, ALIAS, VISIT, SETTINGS, HOTKEYS, MAX_READS, DEFAULTS,
+    READ, ALIAS, VISIT, VISIT_GAPS, SETTINGS, HOTKEYS, MAX_READS, DEFAULTS,
     settings, isHotkeyCode, keyLabel, cafeRef, parseArticle, isArticleView, storeKey, lookupKeys, invertAliases, fromStorage, pruneKeys
   };
 });

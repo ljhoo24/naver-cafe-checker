@@ -1,7 +1,7 @@
 // "New since your last visit" divider on PC board lists.
 //
 // Per board it remembers the newest article number seen. When a new visit
-// starts (no activity in the cafe for VISIT_GAP_MS), that number becomes the
+// starts (no activity in the cafe for settings.visitGap minutes), that number becomes the
 // mark, and the list gets a line above the first row at or below it. Article
 // numbers only grow, so this works without timestamps from the list. Only
 // attributes are added; content.css draws the line.
@@ -10,7 +10,6 @@
   if (globalThis.__cafeCheckerNewMarkLoaded) return;
   globalThis.__cafeCheckerNewMarkLoaded = true;
   const C = CafeChecker;
-  const VISIT_GAP_MS = 30 * 60 * 1000;
   const TOUCH_EVERY_MS = 60 * 1000;
   // Newest-first table of the PC list view; notices are pinned and skipped.
   const ROWS = 'table.article-table tr:not(.board-notice)';
@@ -79,10 +78,10 @@
   }
 
   // Pure: next record for a board given what the list shows now.
-  function visit(rec, newest, now, cafeActive) {
+  function visit(rec, newest, now, cafeActive, gapMs = 30 * 60 * 1000) {
     if (!rec) return { mark: newest, latest: newest, at: now, markAt: now };
     const last = Math.max(rec.at || 0, cafeActive || 0);
-    if (now - last > VISIT_GAP_MS) return { mark: rec.latest, latest: Math.max(rec.latest, newest), at: now, markAt: last };
+    if (now - last > gapMs) return { mark: rec.latest, latest: Math.max(rec.latest, newest), at: now, markAt: last };
     return { ...rec, latest: Math.max(rec.latest, newest), at: now };
   }
 
@@ -100,7 +99,7 @@
       let items = {};
       try { items = await chrome.storage.local.get([key, cafeKey]); } catch { return; }
       const now = Date.now();
-      record = visit(items[key], Math.max(...list.map(r => r.id)), now, items[cafeKey]);
+      record = visit(items[key], Math.max(...list.map(r => r.id)), now, items[cafeKey], settings.visitGap * 60 * 1000);
       lastTouch = now;
       save({ [key]: record, [cafeKey]: now });
     }
