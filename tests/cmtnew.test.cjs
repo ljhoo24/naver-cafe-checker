@@ -132,3 +132,23 @@ test('reading the article again clears +N on open lists', async t => {
   assert.equal(store.data['k:c:1:101'], 5);
   assert.equal(l.get('c1').hasAttribute(CMT), false);
 });
+
+test('turning the setting off removes +N and stops recording baselines', async t => {
+  const store = createStore({ 'r:c:1:101': 1, 'k:c:1:101': 3 });
+  const h = await page(list(5, 1), { store, url: LIST_URL });
+  t.after(() => h.dom.window.close());
+  assert.equal(h.get('c1').getAttribute(CMT), '2');
+  await store.local.set({ settings: { cmtNew: false } });
+  await h.settle();
+  assert.equal(h.get('c1').hasAttribute(CMT), false);
+  assert.equal(h.doc.documentElement.hasAttribute('data-ncc-cmt'), false);
+  assert.equal(h.get('c1').getAttribute('data-ncc-read'), 'extra');
+  noNav(h.get('t2'));
+  h.get('t2').click();
+  await h.settle();
+  assert.ok(store.data['r:c:1:102']);
+  assert.equal(store.data['k:c:1:102'], undefined);
+  await store.local.set({ settings: { cmtNew: true } });
+  await h.settle();
+  assert.equal(h.get('c1').getAttribute(CMT), '2');
+});

@@ -55,3 +55,15 @@ tr[data-ncc-new-boundary] > td[data-ncc-new-label]::before {
   white-space: nowrap;
   pointer-events: none;
 }
+
+/* New comments on a read article (content.js): "+3" after its comment count. */
+html[data-ncc-cmt] a[data-ncc-cmt-new]::after {
+  content: "+" attr(data-ncc-cmt-new);
+  display: inline-block;
+  margin-left: 4px;
+  color: #03c75a !important;
+  font-size: inherit;
+  font-weight: 700;
+  font-style: normal;
+  text-decoration: none;
+}

@@ -5,7 +5,7 @@
   const $ = id => document.getElementById(id);
   let settings = C.settings();
   let confirmTimer = null;
-  const KEYS = ['enabled', 'dim', 'badge', 'newMark', 'sync', 'likeRetry', 'hotkeys'];
+  const KEYS = ['enabled', 'dim', 'badge', 'cmtNew', 'newMark', 'sync', 'likeRetry', 'hotkeys'];
   const HOTKEYS = Object.fromEntries(C.HOTKEYS.map(h => [h.name, h]));
   const SCREEN_NAMES = { article: '글 화면', list: '목록 화면' };
   const KEY_HINT = '키 버튼을 누른 뒤 원하는 키를 누르세요 (Backspace: 끄기). 한/영 상태와 관계없이 같은 자리의 키로 동작합니다.';

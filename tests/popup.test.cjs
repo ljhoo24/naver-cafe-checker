@@ -130,3 +130,13 @@ test('clear-all needs a second click and records the clear for other browsers', 
   assert.ok(p.store.data['sync:clearedAt'] > 0);
   assert.equal(p.$('count').textContent, '0');
 });
+
+test('new comment toggle saves', async t => {
+  const p = await popup({});
+  t.after(() => p.dom.window.close());
+  assert.equal(p.$('cmtNew').checked, true);
+  p.$('cmtNew').checked = false;
+  p.$('cmtNew').dispatchEvent(new p.w.Event('change'));
+  await wait(20);
+  assert.equal(p.store.data.settings.cmtNew, false);
+});

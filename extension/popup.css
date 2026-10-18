@@ -24,6 +24,8 @@ button.key.off { color: #999; font-weight: normal; }
 button.key.capturing { border-color: #2f8a45; background: #eef8f0; color: #2f8a45; }
 #keyHint.error { color: #b3261e; }
 .badge { padding: 0 5px; border: 1px solid #b7dfc0; border-radius: 3px; background: #eef8f0; color: #2f8a45; font-size: 11px; font-weight: 600; }
+.cmtnew { color: #a0a0a0; font-size: 12px; }
+.cmtnew b { color: #03c75a; }
 .sync-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 4px 0; color: #555; font-size: 12px; }
 #syncStatus.error { color: #b3261e; }
 fieldset .hint { margin: 4px 0 0; }
