@@ -65,3 +65,70 @@ test('+N follows baseline changes from other tabs and list updates', async t => 
   await h.settle();
   assert.equal(h.get('c1').hasAttribute(CMT), false);
 });
+
+test('clicking a title or its comment count records the row count', async t => {
+  const store = createStore();
+  const h = await page(list(4, 2), { store, url: LIST_URL });
+  t.after(() => h.dom.window.close());
+  noNav(h.get('t1'));
+  h.get('t1').click();
+  await h.settle();
+  assert.ok(store.data['r:c:1:101']);
+  assert.equal(store.data['k:c:1:101'], 4);
+  assert.equal(h.get('c1').hasAttribute(CMT), false);
+  noNav(h.get('c2'));
+  h.get('c2').click();
+  await h.settle();
+  assert.equal(store.data['k:c:1:102'], 2);
+  // Clicking an already read article again moves its baseline to the row count.
+  await store.local.set({ 'k:c:1:101': 1 });
+  await h.settle();
+  assert.equal(h.get('c1').getAttribute(CMT), '3');
+  h.get('t1').click();
+  await h.settle();
+  assert.equal(store.data['k:c:1:101'], 4);
+  assert.equal(h.get('c1').hasAttribute(CMT), false);
+});
+
+const ARTICLE_URL = 'https://cafe.naver.com/f-e/cafes/1/articles/200?boardtype=L';
+const articlePage = top => `
+<div class="ArticleContentBox">
+  <div class="ArticleTopBtns"><a id="cmtTop" href="?commentFocus=true">${top}</a></div>
+  <div class="se-main-container">본문</div>
+</div>`;
+
+test('the article page keeps the baseline in step with its comment count', async t => {
+  const store = createStore();
+  const h = await page(articlePage('댓글 2'), { store, url: ARTICLE_URL });
+  t.after(() => h.dom.window.close());
+  assert.ok(store.data['r:c:1:200']);
+  assert.equal(store.data['k:c:1:200'], 2);
+  // Own comment posted while reading.
+  h.get('cmtTop').textContent = '댓글 3';
+  await h.settle();
+  assert.equal(store.data['k:c:1:200'], 3);
+  // Count split over elements, e.g. a hidden label and a number.
+  h.get('cmtTop').innerHTML = '<span class="blind">댓글</span><strong class="num">4</strong>';
+  await h.settle();
+  assert.equal(store.data['k:c:1:200'], 4);
+});
+
+test('an article page without a comment count records no baseline', async t => {
+  const store = createStore();
+  const h = await page('<div class="ArticleContentBox"><a href="#">좋아요 4</a></div>', { store, url: ARTICLE_URL });
+  t.after(() => h.dom.window.close());
+  assert.ok(store.data['r:c:1:200']);
+  assert.equal(store.data['k:c:1:200'], undefined);
+});
+
+test('reading the article again clears +N on open lists', async t => {
+  const store = createStore({ 'r:c:1:101': 1, 'k:c:1:101': 3 });
+  const l = await page(list(5, 0), { store, url: LIST_URL });
+  t.after(() => l.dom.window.close());
+  assert.equal(l.get('c1').getAttribute(CMT), '2');
+  const a = await page(articlePage('댓글 5'), { store, url: 'https://cafe.naver.com/f-e/cafes/1/articles/101' });
+  t.after(() => a.dom.window.close());
+  await l.settle();
+  assert.equal(store.data['k:c:1:101'], 5);
+  assert.equal(l.get('c1').hasAttribute(CMT), false);
+});

@@ -86,6 +86,27 @@
     if (!bases.has(key)) { setBase(article, count); return 0; }
     return Math.max(0, count - bases.get(key));
   }
+  // Comment count shown in the same list row as `a`, e.g. "[5]".
+  function rowCount(a, article) {
+    const row = a.closest(ROW) || a.parentElement;
+    if (!row) return null;
+    for (const link of row.querySelectorAll('a[href]')) {
+      const other = articleOf(link);
+      const count = other && sameArticle(other, article) && kind(link) === 'extra' ? C.parseCount(link.textContent) : null;
+      if (count !== null) return count;
+    }
+    return null;
+  }
+  // "댓글 5" button on the article page itself.
+  function articleCount() {
+    for (const el of document.querySelectorAll('a, button')) {
+      const text = el.textContent.replace(/\s+/g, ' ').trim();
+      if (!text.startsWith('댓글')) continue;
+      const count = C.parseCount(text);
+      if (count !== null) return count;
+    }
+    return null;
+  }
 
   function learnAlias(cafeUrl, cafeId) {
     if (!cafeUrl || !cafeId || !C.cafeRef(cafeUrl) || aliases[cafeUrl] === cafeId) return;
@@ -171,6 +192,8 @@
     if (!document.documentElement) return;
     applyRootFlags();
     if (settings.enabled) learnAliasFromPage();
+    // While reading, the article's own count is the baseline (own comments included).
+    if (currentArticle && settings.enabled && settings.cmtNew) setBase(currentArticle, articleCount());
     const badged = new WeakMap();
     for (const a of document.querySelectorAll('a[href]')) {
       const article = settings.enabled ? articleOf(a) : null;
@@ -218,7 +241,7 @@
     const a = event.target instanceof Element && event.target.closest('a[href]');
     if (!a) return;
     const article = articleOf(a);
-    if (article && article.sub === '') markRead(article);
+    if (article && article.sub === '') { markRead(article); setBase(article, rowCount(a, article)); }
   }
 
   // --- wiring -----------------------------------------------------------
