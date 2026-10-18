@@ -9,7 +9,6 @@
   // Smallest element that represents one list entry, used so that a title and
   // its comment-count link in the same row get only one "읽음" badge.
   const ROW = 'tr, li, [role="row"], [role="listitem"], .item, article';
-  const COUNT_TEXT = /^[\[(]?\s*[\d,]+\s*[\])]?$/;
   const CAFE_LINK = 'a[class*="cafe_link"], a[class*="cafe_name"], a[class*="CafeName"], a[class*="cafeName"]';
 
   let settings = C.settings();
@@ -177,7 +176,7 @@
   function kind(a) {
     const text = a.textContent.replace(/\s+/g, ' ').trim();
     if (!text || text.length < 2 && a.querySelector('img, picture, video, [style*="background"]')) return 'media';
-    return COUNT_TEXT.test(text) ? 'extra' : 'title';
+    return C.parseCount(text) !== null ? 'extra' : 'title';
   }
   function applyRootFlags() {
     const root = document.documentElement;

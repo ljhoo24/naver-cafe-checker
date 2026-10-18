@@ -67,6 +67,9 @@ test('comment counts, baseline keys and the new-comment setting', () => {
   assert.equal(C.parseCount('12'), 12);
   assert.equal(C.parseCount('댓글 7'), 7);
   assert.equal(C.parseCount('댓글7'), 7);
+  // Real PC list: <a class="cmt"><span class="blind">댓글수</span>[7]</a>
+  assert.equal(C.parseCount('댓글수[7]'), 7);
+  assert.equal(C.parseCount('댓글 수 [1,277]'), 1277);
   assert.equal(C.parseCount('댓글'), null);
   assert.equal(C.parseCount('댓글 3개 남겨주세요'), null);
   assert.equal(C.parseCount('첫 번째 글'), null);

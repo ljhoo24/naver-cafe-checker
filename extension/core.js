@@ -19,8 +19,9 @@
   const READ = 'r:';
   const ALIAS = 'a:';
   const COMMENTS = 'k:';
-  // "[5]", "(1,234)", "12" in a list row; "댓글 7" on an article page.
-  const COUNT = /^(?:댓글\s*)?[\[(]?\s*(\d[\d,]{0,8})\s*[\])]?$/;
+  // "[5]", "(1,234)", "12" in a list row, where the PC list puts a hidden
+  // "댓글수" label first ("댓글수[5]"); "댓글 7" on an article page.
+  const COUNT = /^(?:댓글\s*수?\s*)?[\[(]?\s*(\d[\d,]{0,8})\s*[\])]?$/;
   const SETTINGS = 'settings';
   const MAX_READS = 50000;
   const VISIT = 'v:';

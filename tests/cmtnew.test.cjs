@@ -4,15 +4,16 @@ const { createStore, page } = require('./helpers.cjs');
 
 const LIST_URL = 'https://cafe.naver.com/f-e/cafes/1/menus/0';
 const CMT = 'data-ncc-cmt-new';
+// Comment counts as Naver renders them: a hidden "댓글수" label before "[N]".
 const list = (n101, n102) => `
 <div class="article-board"><table><tbody class="board-list">
   <tr><td><div class="inner_list">
     <a id="t1" class="article" href="/f-e/cafes/1/articles/101?boardtype=L">첫 글</a>
-    <a id="c1" class="cmt" href="/f-e/cafes/1/articles/101?commentFocus=true">[${n101}]</a>
+    <a id="c1" class="cmt" href="/f-e/cafes/1/articles/101?commentFocus=true"><span class="blind">댓글수</span>[${n101}]</a>
   </div></td></tr>
   <tr><td><div class="inner_list">
     <a id="t2" class="article" href="/f-e/cafes/1/articles/102?boardtype=L">둘째 글</a>
-    <a id="c2" class="cmt" href="/f-e/cafes/1/articles/102?commentFocus=true">[${n102}]</a>
+    <a id="c2" class="cmt" href="/f-e/cafes/1/articles/102?commentFocus=true"><span class="blind">댓글수</span>[${n102}]</a>
   </div></td></tr>
 </tbody></table></div>`;
 const noNav = a => a.addEventListener('click', e => e.preventDefault());
@@ -58,7 +59,7 @@ test('+N follows baseline changes from other tabs and list updates', async t => 
   const h = await page(list(3, 0), { store, url: LIST_URL });
   t.after(() => h.dom.window.close());
   assert.equal(h.get('c1').hasAttribute(CMT), false);
-  h.get('c1').textContent = '[6]';
+  h.get('c1').innerHTML = '<span class="blind">댓글수</span>[6]';
   await h.settle();
   assert.equal(h.get('c1').getAttribute(CMT), '3');
   await store.local.set({ 'k:c:1:101': 6 });
