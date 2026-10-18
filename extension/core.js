@@ -5,7 +5,9 @@
 //   a:<cafeUrl> -> cafeId                    learned cafe url name -> numeric id
 //   v:<cafeId>:<menuId> -> { mark, latest, at, markAt }  board visit for the "new since" divider
 //   v:<cafeId> -> timestamp                  last activity in the cafe (keeps a visit going)
-//   settings -> { enabled, dim, badge, sync, likeRetry, newMark, visitGap, hotkeys, <hotkey names> }
+//   k:c:<cafeId>:<articleId> -> count        comment count when the article was last seen;
+//   k:u:<cafeUrl>:<articleId> -> count       paired with the r: key of the same suffix (local only)
+//   settings -> { enabled, dim, badge, cmtNew, sync, likeRetry, newMark, visitGap, hotkeys, <hotkey names> }
 //   (visitGap: minutes without cafe activity before a board visit counts as new)
 //   (hotkeys are KeyboardEvent.code values, so they work in any IME mode; '' = off)
 (function (root, factory) {
@@ -16,6 +18,9 @@
   'use strict';
   const READ = 'r:';
   const ALIAS = 'a:';
+  const COMMENTS = 'k:';
+  // "[5]", "(1,234)", "12" in a list row; "댓글 7" on an article page.
+  const COUNT = /^(?:댓글\s*)?[\[(]?\s*(\d[\d,]{0,8})\s*[\])]?$/;
   const SETTINGS = 'settings';
   const MAX_READS = 50000;
   const VISIT = 'v:';
@@ -32,7 +37,7 @@
     { name: 'unreadKey', screen: 'list', label: '안 읽은 첫 글', key: 'KeyN' }
   ].map(Object.freeze));
   const DEFAULTS = Object.freeze({
-    enabled: true, dim: true, badge: true, sync: true, likeRetry: true, newMark: true, visitGap: 30, hotkeys: true,
+    enabled: true, dim: true, badge: true, cmtNew: true, sync: true, likeRetry: true, newMark: true, visitGap: 30, hotkeys: true,
     ...Object.fromEntries(HOTKEYS.map(h => [h.name, h.key]))
   });
   const HOTKEY_CODE = /^(?:Key[A-Z]|Digit[0-9]|Numpad[0-9]|Arrow(?:Left|Right|Up|Down)|BracketLeft|BracketRight|Comma|Period|Semicolon|Quote|Slash|Backslash|Minus|Equal|Backquote)$/;
@@ -152,15 +157,36 @@
     return out;
   }
 
-  // Splits a chrome.storage dump into { reads:Set, aliases:{}, settings }.
+  // Number shown by a comment count, or null when the text is not one.
+  function parseCount(text) {
+    const m = COUNT.exec(String(text || '').replace(/\s+/g, ' ').trim());
+    if (!m) return null;
+    const n = Number(m[1].replace(/,/g, ''));
+    return Number.isSafeInteger(n) ? n : null;
+  }
+
+  // Comment baseline key paired with a read key: r:c:1:2 -> k:c:1:2.
+  function commentKey(readKey) {
+    return COMMENTS + readKey.slice(READ.length);
+  }
+
+  // Baselines whose read record is gone (removed while nothing cleaned up after it).
+  function orphanCommentKeys(items) {
+    const all = items || {};
+    return Object.keys(all).filter(k => k.startsWith(COMMENTS) && !((READ + k.slice(COMMENTS.length)) in all));
+  }
+
+  // Splits a chrome.storage dump into { reads:Set, aliases:{}, bases:Map, settings }.
   function fromStorage(items) {
     const reads = new Set();
     const aliases = {};
+    const bases = new Map();
     for (const [k, v] of Object.entries(items || {})) {
       if (k.startsWith(READ)) reads.add(k);
       else if (k.startsWith(ALIAS) && DIGITS.test(String(v))) aliases[k.slice(ALIAS.length)] = String(v);
+      else if (k.startsWith(COMMENTS) && Number.isSafeInteger(v) && v >= 0) bases.set(k, v);
     }
-    return { reads, aliases, settings: settings(items && items[SETTINGS]) };
+    return { reads, aliases, bases, settings: settings(items && items[SETTINGS]) };
   }
 
   // Oldest read keys to delete so at most `max` remain.
@@ -172,7 +198,8 @@
   }
 
   return {
-    READ, ALIAS, VISIT, VISIT_GAPS, SETTINGS, HOTKEYS, MAX_READS, DEFAULTS,
-    settings, isHotkeyCode, keyLabel, cafeRef, parseArticle, isArticleView, storeKey, lookupKeys, invertAliases, fromStorage, pruneKeys
+    READ, ALIAS, COMMENTS, VISIT, VISIT_GAPS, SETTINGS, HOTKEYS, MAX_READS, DEFAULTS,
+    settings, isHotkeyCode, keyLabel, cafeRef, parseArticle, isArticleView, storeKey, lookupKeys, invertAliases,
+    parseCount, commentKey, orphanCommentKeys, fromStorage, pruneKeys
   };
 });

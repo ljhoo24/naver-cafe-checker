@@ -60,3 +60,24 @@ test('storage helpers: defaults, split and pruning oldest first', () => {
   assert.deepEqual(C.pruneKeys({ 'r:c:1:1': 30, 'r:c:1:2': 10, 'r:c:1:3': 20, 'a:x': '1' }, 2), ['r:c:1:2']);
   assert.deepEqual(C.pruneKeys({ 'r:c:1:1': 1 }, 2), []);
 });
+
+test('comment counts, baseline keys and the new-comment setting', () => {
+  assert.equal(C.parseCount('[5]'), 5);
+  assert.equal(C.parseCount(' ( 1,234 ) '), 1234);
+  assert.equal(C.parseCount('12'), 12);
+  assert.equal(C.parseCount('댓글 7'), 7);
+  assert.equal(C.parseCount('댓글7'), 7);
+  assert.equal(C.parseCount('댓글'), null);
+  assert.equal(C.parseCount('댓글 3개 남겨주세요'), null);
+  assert.equal(C.parseCount('첫 번째 글'), null);
+  assert.equal(C.parseCount('[,]'), null);
+  assert.equal(C.parseCount(''), null);
+  assert.equal(C.commentKey('r:c:1:2'), 'k:c:1:2');
+  assert.equal(C.commentKey('r:u:foo:9'), 'k:u:foo:9');
+  assert.equal(C.settings({}).cmtNew, true);
+  assert.equal(C.settings({ cmtNew: false }).cmtNew, false);
+  const state = C.fromStorage({ 'r:c:1:2': 5, 'k:c:1:2': 3, 'k:c:1:3': 'x', 'k:c:1:4': -1, 'k:c:1:5': 0 });
+  assert.deepEqual([...state.reads], ['r:c:1:2']);
+  assert.deepEqual([...state.bases], [['k:c:1:2', 3], ['k:c:1:5', 0]]);
+  assert.deepEqual(C.orphanCommentKeys({ 'r:c:1:2': 5, 'k:c:1:2': 3, 'k:u:foo:9': 1, 'a:foo': '1' }), ['k:u:foo:9']);
+});
