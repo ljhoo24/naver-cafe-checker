@@ -96,11 +96,14 @@
     }
     return null;
   }
-  // "댓글 5" button on the article page itself.
+  // The article's own "댓글 5" button (a.button_comment in the cafe_main frame).
+  // Counts inside links to other articles listed on the page are never it.
   function articleCount() {
-    for (const el of document.querySelectorAll('a, button')) {
+    for (const el of [...document.querySelectorAll('.button_comment'), ...document.querySelectorAll('a, button')]) {
       const text = el.textContent.replace(/\s+/g, ' ').trim();
       if (!text.startsWith('댓글')) continue;
+      const link = el.closest('a[href]');
+      if (link && articleOf(link)) continue;
       const count = C.parseCount(text);
       if (count !== null) return count;
     }

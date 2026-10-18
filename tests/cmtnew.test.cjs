@@ -91,11 +91,12 @@ test('clicking a title or its comment count records the row count', async t => {
   assert.equal(h.get('c1').hasAttribute(CMT), false);
 });
 
-const ARTICLE_URL = 'https://cafe.naver.com/f-e/cafes/1/articles/200?boardtype=L';
+// The PC article body is the cafe_main iframe at /ca-fe/cafes/<id>/articles/<n>.
+const ARTICLE_URL = 'https://cafe.naver.com/ca-fe/cafes/1/articles/200?menuid=1&referrerAllArticles=false';
 const articlePage = top => `
 <div class="ArticleContentBox">
-  <div class="ArticleTopBtns"><a id="cmtTop" href="?commentFocus=true">${top}</a></div>
   <div class="se-main-container">본문</div>
+  <div class="ArticleTool"><a id="cmtTop" href="#" role="button" class="button_comment">${top}</a><a href="#">URL 복사</a></div>
 </div>`;
 
 test('the article page keeps the baseline in step with its comment count', async t => {
@@ -127,7 +128,7 @@ test('reading the article again clears +N on open lists', async t => {
   const l = await page(list(5, 0), { store, url: LIST_URL });
   t.after(() => l.dom.window.close());
   assert.equal(l.get('c1').getAttribute(CMT), '2');
-  const a = await page(articlePage('댓글 5'), { store, url: 'https://cafe.naver.com/f-e/cafes/1/articles/101' });
+  const a = await page(articlePage('댓글 5'), { store, url: 'https://cafe.naver.com/ca-fe/cafes/1/articles/101?menuid=1' });
   t.after(() => a.dom.window.close());
   await l.settle();
   assert.equal(store.data['k:c:1:101'], 5);
@@ -152,4 +153,17 @@ test('turning the setting off removes +N and stops recording baselines', async t
   await store.local.set({ settings: { cmtNew: true } });
   await h.settle();
   assert.equal(h.get('c1').getAttribute(CMT), '2');
+});
+
+test('other articles listed on the article page never become its baseline', async t => {
+  const store = createStore();
+  const other = `<ul class="list"><li><a id="o1" href="/ca-fe/cafes/1/articles/300"><span class="num"><span class="blind">댓글</span> [9]</span></a></li></ul>`;
+  // Rendered before the article's own button (e.g. the button is still loading).
+  const h = await page(other, { store, url: ARTICLE_URL });
+  t.after(() => h.dom.window.close());
+  assert.ok(store.data['r:c:1:200']);
+  assert.equal(store.data['k:c:1:200'], undefined);
+  h.doc.body.insertAdjacentHTML('beforeend', articlePage('댓글 2'));
+  await h.settle();
+  assert.equal(store.data['k:c:1:200'], 2);
 });
