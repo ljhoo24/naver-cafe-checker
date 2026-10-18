@@ -87,6 +87,21 @@ test('prunes oldest records beyond the limit on startup', async () => {
   assert.ok(!('r:c:1:0' in bg.store.data) && !('r:c:1:2' in bg.store.data) && 'r:c:1:3' in bg.store.data);
 });
 
+test('comment baselines follow their read records', async () => {
+  const bg = load({ settings: { sync: false }, 'r:c:1:1': 1, 'k:c:1:1': 2, 'r:c:1:2': 1, 'k:c:1:2': 5, 'k:c:1:9': 4 });
+  bg.hooks.startup();
+  await wait(50);
+  // Orphan (no r:c:1:9) is pruned; paired baselines stay.
+  assert.equal(bg.store.data['k:c:1:9'], undefined);
+  assert.equal(bg.store.data['k:c:1:1'], 2);
+  assert.equal(bg.store.data['k:c:1:2'], 5);
+  // Removing a read record (unread, clear all, sync) removes its baseline.
+  await bg.store.local.remove('r:c:1:2');
+  await wait(20);
+  assert.equal(bg.store.data['k:c:1:2'], undefined);
+  assert.equal(bg.store.data['k:c:1:1'], 2);
+});
+
 test('two browsers on one Google account share reads, unread marks and clear-all', async () => {
   const sync = createSyncStore();
   const a = load({ 'r:c:100:1': Date.now() - 5000, 'r:c:100:2': Date.now() - 4000, 'a:mycafe': '100' }, sync);

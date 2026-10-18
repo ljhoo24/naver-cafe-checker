@@ -19,7 +19,7 @@ function createMenus() {
 
 async function prune() {
   const items = await chrome.storage.local.get(null);
-  const stale = C.pruneKeys(items);
+  const stale = [...C.pruneKeys(items), ...C.orphanCommentKeys(items)];
   if (stale.length) await chrome.storage.local.remove(stale);
 }
 
@@ -105,16 +105,20 @@ chrome.storage.onChanged.addListener((changes, area) => {
   }
   if (area !== 'local') return;
   let dirty = false;
+  const baselines = [];
   for (const [k, change] of Object.entries(changes)) {
     if (k.startsWith(C.READ)) {
       dirty = true;
       if (change.oldValue === undefined && change.newValue !== undefined) newReads++;
+      // A read record is gone (unread, clear all, prune, sync): its comment baseline goes too.
+      if (change.newValue === undefined) baselines.push(C.commentKey(k));
     } else if (k.startsWith(C.ALIAS) || k === S.LOCAL_TOMB || k === S.LOCAL_CLEARED) {
       dirty = true;
     } else if (k === C.SETTINGS && C.settings(change.newValue).sync && !C.settings(change.oldValue).sync) {
       syncNow();
     }
   }
+  if (baselines.length) chrome.storage.local.remove(baselines).catch(() => {});
   if (newReads >= PRUNE_EVERY) { newReads = 0; prune().catch(() => {}); }
   if (dirty) scheduleSync().catch(() => {});
 });
