@@ -4,7 +4,8 @@
   globalThis.__cafeCheckerLoaded = true;
   const C = CafeChecker;
   const MARK = 'data-ncc-read';
-  const ROOT_FLAGS = { dim: 'data-ncc-dim', badge: 'data-ncc-badge' };
+  const ROOT_FLAGS = { dim: 'data-ncc-dim', badge: 'data-ncc-badge', cmtNew: 'data-ncc-cmt' };
+  const CMT_NEW = 'data-ncc-cmt-new';
   // Smallest element that represents one list entry, used so that a title and
   // its comment-count link in the same row get only one "읽음" badge.
   const ROW = 'tr, li, [role="row"], [role="listitem"], .item, article';
@@ -15,6 +16,8 @@
   let reads = new Set();
   let aliases = {};
   let urlsById = {};
+  // k: comment baseline key -> count when the article was last seen.
+  let bases = new Map();
   let lastHref = '';
   let scanTimer = null;
   let aliasLearned = false;
@@ -61,6 +64,29 @@
     save({ [key]: Date.now() });
     schedule();
   }
+  // --- comments since last seen -----------------------------------------
+  // A baseline lives under the k: twin of the article's read key, so only read
+  // articles have one.
+  function baseKey(article) {
+    const read = C.lookupKeys(article, aliases, urlsById).find(k => reads.has(k));
+    return read ? C.commentKey(read) : null;
+  }
+  function setBase(article, count) {
+    if (!settings.enabled || !settings.cmtNew || count === null) return;
+    const key = baseKey(article);
+    if (!key || bases.get(key) === count) return;
+    bases.set(key, count);
+    save({ [key]: count });
+  }
+  // New comments on a read list entry. One seen without a baseline gets it now,
+  // quietly. A smaller count (another tab's stale list) never lowers it.
+  function newComments(article, count) {
+    const key = baseKey(article);
+    if (!key) return 0;
+    if (!bases.has(key)) { setBase(article, count); return 0; }
+    return Math.max(0, count - bases.get(key));
+  }
+
   function learnAlias(cafeUrl, cafeId) {
     if (!cafeUrl || !cafeId || !C.cafeRef(cafeUrl) || aliases[cafeUrl] === cafeId) return;
     aliases = { ...aliases, [cafeUrl]: cafeId };
@@ -149,6 +175,7 @@
     for (const a of document.querySelectorAll('a[href]')) {
       const article = settings.enabled ? articleOf(a) : null;
       let value = null;
+      let fresh = 0;
       if (article && C.isArticleView(article) && isRead(article)) {
         value = kind(a);
         if (value === 'title') {
@@ -159,9 +186,15 @@
           seen.add(key);
           badged.set(row, seen);
         }
+        if (value === 'extra' && settings.cmtNew) {
+          const count = C.parseCount(a.textContent);
+          if (count !== null) fresh = newComments(article, count);
+        }
       }
       if (value) { if (a.getAttribute(MARK) !== value) a.setAttribute(MARK, value); }
       else if (a.hasAttribute(MARK)) a.removeAttribute(MARK);
+      if (fresh > 0) { if (a.getAttribute(CMT_NEW) !== String(fresh)) a.setAttribute(CMT_NEW, String(fresh)); }
+      else if (a.hasAttribute(CMT_NEW)) a.removeAttribute(CMT_NEW);
     }
   }
   function schedule() {
@@ -201,6 +234,8 @@
         if (change.newValue === undefined) delete next[cafeUrl]; else next[cafeUrl] = String(change.newValue);
         aliases = next;
         aliasChanged = true;
+      } else if (k.startsWith(C.COMMENTS)) {
+        if (Number.isSafeInteger(change.newValue)) bases.set(k, change.newValue); else bases.delete(k);
       } else if (k === C.SETTINGS) {
         const wasEnabled = settings.enabled;
         settings = C.settings(change.newValue);
@@ -227,6 +262,7 @@
     reads = state.reads;
     aliases = state.aliases;
     urlsById = C.invertAliases(aliases);
+    bases = state.bases;
     settings = state.settings;
     const start = () => {
       checkLocation();

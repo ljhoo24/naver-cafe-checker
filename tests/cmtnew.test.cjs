@@ -1,0 +1,67 @@
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const { createStore, page } = require('./helpers.cjs');
+
+const LIST_URL = 'https://cafe.naver.com/f-e/cafes/1/menus/0';
+const CMT = 'data-ncc-cmt-new';
+const list = (n101, n102) => `
+<div class="article-board"><table><tbody class="board-list">
+  <tr><td><div class="inner_list">
+    <a id="t1" class="article" href="/f-e/cafes/1/articles/101?boardtype=L">첫 글</a>
+    <a id="c1" class="cmt" href="/f-e/cafes/1/articles/101?commentFocus=true">[${n101}]</a>
+  </div></td></tr>
+  <tr><td><div class="inner_list">
+    <a id="t2" class="article" href="/f-e/cafes/1/articles/102?boardtype=L">둘째 글</a>
+    <a id="c2" class="cmt" href="/f-e/cafes/1/articles/102?commentFocus=true">[${n102}]</a>
+  </div></td></tr>
+</tbody></table></div>`;
+const noNav = a => a.addEventListener('click', e => e.preventDefault());
+
+test('a read article with more comments than its baseline shows +N', async t => {
+  const store = createStore({ 'r:c:1:101': 1, 'k:c:1:101': 3 });
+  const h = await page(list(5, 0), { store, url: LIST_URL });
+  t.after(() => h.dom.window.close());
+  assert.equal(h.get('c1').getAttribute(CMT), '2');
+  assert.equal(h.get('t1').hasAttribute(CMT), false);
+  assert.equal(h.get('c2').hasAttribute(CMT), false);
+  assert.ok(h.doc.documentElement.hasAttribute('data-ncc-cmt'));
+});
+
+test('a read article seen without a baseline stores the count quietly', async t => {
+  const store = createStore({ 'r:c:1:101': 1 });
+  const h = await page(list(7, 0), { store, url: LIST_URL });
+  t.after(() => h.dom.window.close());
+  assert.equal(store.data['k:c:1:101'], 7);
+  assert.equal(h.get('c1').hasAttribute(CMT), false);
+  // Unread articles get no baseline.
+  assert.equal(store.data['k:c:1:102'], undefined);
+});
+
+test('the baseline uses the existing read key, even a cafe url-name one', async t => {
+  const store = createStore({ 'a:mycafe': '1', 'r:u:mycafe:101': 1 });
+  const h = await page(list(4, 0), { store, url: LIST_URL });
+  t.after(() => h.dom.window.close());
+  assert.equal(store.data['k:u:mycafe:101'], 4);
+  assert.equal(store.data['k:c:1:101'], undefined);
+});
+
+test('fewer comments than the baseline shows nothing and keeps the baseline', async t => {
+  const store = createStore({ 'r:c:1:101': 1, 'k:c:1:101': 5 });
+  const h = await page(list(3, 0), { store, url: LIST_URL });
+  t.after(() => h.dom.window.close());
+  assert.equal(h.get('c1').hasAttribute(CMT), false);
+  assert.equal(store.data['k:c:1:101'], 5);
+});
+
+test('+N follows baseline changes from other tabs and list updates', async t => {
+  const store = createStore({ 'r:c:1:101': 1, 'k:c:1:101': 3 });
+  const h = await page(list(3, 0), { store, url: LIST_URL });
+  t.after(() => h.dom.window.close());
+  assert.equal(h.get('c1').hasAttribute(CMT), false);
+  h.get('c1').textContent = '[6]';
+  await h.settle();
+  assert.equal(h.get('c1').getAttribute(CMT), '3');
+  await store.local.set({ 'k:c:1:101': 6 });
+  await h.settle();
+  assert.equal(h.get('c1').hasAttribute(CMT), false);
+});
