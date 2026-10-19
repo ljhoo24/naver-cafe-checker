@@ -1,4 +1,4 @@
-importScripts('core.js', 'sync.js');
+importScripts('core.js', 'sync.js', 'block-core.js');
 const C = CafeChecker;
 const S = CafeSync;
 const LINK_PATTERNS = ['*://cafe.naver.com/*', '*://m.cafe.naver.com/*'];
@@ -9,11 +9,24 @@ const SYNC_GAP_MS = 60 * 1000;
 let newReads = 0;
 let syncing = null;
 let lastSync = 0;
+let blockQueue = Promise.resolve();
+
+function mutateBlock(action) {
+  const task = blockQueue.then(async () => {
+    const stored = await chrome.storage.local.get(CafeQuiet.KEY);
+    const state = CafeQuiet.update(stored[CafeQuiet.KEY], action);
+    await chrome.storage.local.set({ [CafeQuiet.KEY]: state });
+    return state;
+  });
+  blockQueue = task.catch(() => {});
+  return task;
+}
 
 function createMenus() {
   chrome.contextMenus.removeAll(() => {
     chrome.contextMenus.create({ id: 'ncc-unread', title: '카페 읽음 표시: 안 읽은 글로 되돌리기', contexts: ['link'], targetUrlPatterns: LINK_PATTERNS });
     chrome.contextMenus.create({ id: 'ncc-read', title: '카페 읽음 표시: 읽은 글로 표시', contexts: ['link'], targetUrlPatterns: LINK_PATTERNS });
+    chrome.contextMenus.create({ id: 'cafe-quiet-nickname', title: '카페 읽음 표시: 이 닉네임 차단', contexts: ['all'], documentUrlPatterns: LINK_PATTERNS });
   });
 }
 
@@ -23,7 +36,14 @@ async function prune() {
   if (stale.length) await chrome.storage.local.remove(stale);
 }
 
-async function onMenu(info) {
+async function onMenu(info, tab) {
+  if (info.menuItemId === 'cafe-quiet-nickname') {
+    if (tab?.id == null) return;
+    try {
+      await chrome.tabs.sendMessage(tab.id, {type:'cafe-quiet-context-block', selection:info.selectionText || ''}, {frameId:info.frameId ?? 0});
+    } catch { await chrome.action.openPopup?.().catch(() => {}); }
+    return;
+  }
   const article = C.parseArticle(info.linkUrl || '');
   if (!article) return;
   const items = await chrome.storage.local.get(null);
@@ -87,11 +107,16 @@ function setup() {
 
 chrome.runtime.onInstalled.addListener(() => { createMenus(); setup(); });
 chrome.runtime.onStartup.addListener(setup);
-chrome.contextMenus.onClicked.addListener(info => { onMenu(info).catch(() => {}); });
+chrome.contextMenus.onClicked.addListener((info, tab) => { onMenu(info, tab).catch(() => {}); });
 chrome.alarms.onAlarm.addListener(alarm => {
   if (alarm.name === SYNC_SOON || alarm.name === SYNC_PERIODIC) syncNow();
 });
-chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message?.channel === 'cafe-quiet') {
+    if (sender.id !== chrome.runtime.id) return false;
+    mutateBlock(message.action).then(state => sendResponse({ok:true,state}), error => sendResponse({ok:false,error:error.message}));
+    return true;
+  }
   if (!message || message.type !== 'ncc-sync-now') return false;
   syncNow().then(sendResponse);
   return true;

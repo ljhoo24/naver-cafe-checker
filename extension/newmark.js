@@ -61,6 +61,9 @@
     }
   }
   function draw(list) {
+    // Remove old boundaries even when their row has just become hidden.
+    clear();
+    list = list.filter(({row}) => !row.closest('[data-cafe-quiet-hidden="true"]'));
     const fresh = record && record.mark != null ? list.filter(r => r.id > record.mark) : [];
     const boundary = fresh.length ? list.find(r => r.id <= record.mark) : null;
     for (const { row } of list) {
@@ -129,7 +132,9 @@
   });
   chrome.storage.local.get(C.SETTINGS).then(items => {
     settings = C.settings(items[C.SETTINGS]);
-    new MutationObserver(schedule).observe(document.documentElement, { childList: true, subtree: true });
+    new MutationObserver(schedule).observe(document.documentElement, {
+      childList: true, subtree: true, attributes: true, attributeFilter:['data-cafe-quiet-hidden']
+    });
     // SPA routing changes the URL without a page load. Leaving the list (to an
     // article) forgets it, so coming back to the same list URL is a new look at
     // the board and may start a new visit.

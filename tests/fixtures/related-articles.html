@@ -1,0 +1,35 @@
+<!-- Minimal RelatedArticlesList DOM, based on Naver's public renderer:
+     https://ca-fe.pstatic.net/web-section/js/app.1340ad45.js (2026-09-12).
+     The profile control is an A with role=button, NOT a BUTTON element.
+     Test names and titles are placeholders; no user account state is included. -->
+<div id="app">
+  <div class="Article">
+    <div class="ArticleContentBox" id="main-article">
+      <div class="WriterInfo"><a class="nickname">정상 작성자</a></div>
+      <h3>현재 읽는 글</h3><p>정상 본문</p>
+    </div>
+    <div class="RelatedArticles" id="related-board">
+      <h2 class="article_board_title"><strong class="title">자유게시판</strong><span class="text">게시판 글</span></h2>
+      <div class="RelatedArticlesTabContainer"><div class="RelatedArticlesTabContainer__tab"><div class="tab_content"><div class="RelatedArticlesTab">
+        <ul class="RelatedArticlesList">
+          <li class="list_item" id="row-above">
+            <div class="tit_area"><a class="tit" href="https://cafe.naver.com/ArticleRead.nhn?clubid=31780162&amp;articleid=462"><span>유지할 윗글</span></a></div>
+            <div class="member_area"><a class="member" id="Related4620" href="#" role="button"> 정상 작성자 </a></div>
+            <div class="date_area">12:13</div>
+          </li>
+          <li class="list_item" id="row-blocked">
+            <div class="tit_area"><a class="tit" href="https://cafe.naver.com/ArticleRead.nhn?clubid=31780162&amp;articleid=461"><span>차단한 사람의 글</span></a><span class="num"><span class="blind">댓글</span> [3] </span></div>
+            <div class="member_area"><a class="member" id="Related4611" href="#" role="button"> 차단맨 </a></div>
+            <div class="date_area">04:58</div>
+          </li>
+          <li class="list_item selected" id="row-below">
+            <div class="tit_area"><a class="tit" href="https://cafe.naver.com/ArticleRead.nhn?clubid=31780162&amp;articleid=460"><span>유지할 아랫글</span></a></div>
+            <div class="member_area"><a class="member" id="Related4602" href="#" role="button"> 다른 작성자 </a></div>
+            <div class="date_area">01:23</div>
+          </li>
+        </ul>
+      </div></div></div></div>
+      <div class="paginate_area" id="related-paging"><div class="ArticlePaginate">1 2 3</div><a class="more" href="/ArticleList.nhn">전체보기</a></div>
+    </div>
+  </div>
+</div>

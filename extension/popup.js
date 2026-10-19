@@ -37,6 +37,10 @@
     $('visitGap').disabled = !settings.newMark;
     $('likeBox').disabled = !settings.enabled;
     $('hotkeyBox').disabled = !settings.enabled;
+    $('blockBox').disabled = !settings.enabled;
+    const block = CafeQuiet.settings(items[CafeQuiet.KEY]);
+    $('blocking').checked = block.enabled;
+    $('blockCount').textContent = block.blocked.length;
     renderKeys();
     renderLike(items['like:last']);
     $('syncNow').disabled = !settings.sync;
@@ -84,6 +88,16 @@
   }
   async function refresh() { render(await chrome.storage.local.get(null)); }
   function status(text) { $('status').textContent = text; }
+
+  $('blocking').addEventListener('change', async () => {
+    $('blocking').disabled = true;
+    try {
+      const result = await chrome.runtime.sendMessage({channel:'cafe-quiet',action:{type:'preferences',enabled:$('blocking').checked}});
+      if (!result?.ok) throw Error(result?.error || '차단 설정을 저장하지 못했습니다.');
+      status('');
+    } catch (error) { status(error.message); }
+    finally { $('blocking').disabled = false; await refresh(); }
+  });
 
   for (const k of KEYS) {
     $(k).addEventListener('change', async () => {

@@ -118,6 +118,18 @@ const ARTICLE_EXTRA = (liked = false) => `
 </div></div>
 <div class="CommentWriter"><div class="comment_inbox"><textarea id="commentBox" class="comment_inbox_text"></textarea></div></div>`;
 
+test('hidden blocked articles cannot receive like/comment shortcuts; navigation remains available', async t => {
+  const p = await page(BAR() + `<div class="ArticleContentBox" data-cafe-quiet-hidden="true">${ARTICLE_EXTRA()}</div>`);
+  t.after(() => p.dom.window.close());
+  p.w.HTMLElement.prototype.scrollIntoView = function () {};
+  p.press('KeyL');
+  assert.deepEqual(p.clicks, []);
+  p.press('KeyC');
+  assert.notEqual(p.doc.activeElement.id, 'commentBox');
+  p.press('KeyQ');
+  assert.deepEqual(p.clicks, ['toList']);
+});
+
 test('article page: L likes (never unlikes), C focuses the comment box, Q returns to the list', async t => {
   const p = await page(BAR() + ARTICLE_EXTRA());
   t.after(() => p.dom.window.close());

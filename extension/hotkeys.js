@@ -44,7 +44,9 @@
   }
   function first(selector, docs, filter = () => true) {
     for (const doc of docs) {
-      for (const el of doc.querySelectorAll(selector)) if (filter(el)) return el;
+      for (const el of doc.querySelectorAll(selector)) {
+        if (!el.closest('[data-cafe-quiet-hidden="true"]') && filter(el)) return el;
+      }
     }
     return null;
   }
@@ -102,6 +104,7 @@
     unreadKey(docs) {
       for (const doc of docs) {
         for (const row of doc.querySelectorAll(LIST_ROWS)) {
+          if (row.closest('[data-cafe-quiet-hidden="true"]')) continue;
           const links = [...row.querySelectorAll('a[href]')].filter(a => C.parseArticle(a.getAttribute('href'), doc.location.href));
           // content.js marks every link of a read article.
           if (!links.length || links.some(a => a.hasAttribute('data-ncc-read'))) continue;

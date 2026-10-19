@@ -20,6 +20,12 @@
       <label><input type="checkbox" id="newMark"> 게시판 목록에 <span class="newmark">여기부터 새 글</span> 경계선 (지난 방문 이후)</label>
       <div class="gap-row"><label for="visitGap">카페를 이만큼 쉬면 새 방문</label><select id="visitGap"><option value="5">5분</option><option value="10">10분</option><option value="30">30분</option><option value="60">1시간</option></select></div>
     </fieldset>
+    <fieldset id="blockBox">
+      <legend>사용자 차단</legend>
+      <label><input type="checkbox" id="blocking"> 차단한 닉네임과 네이버 차단 안내 숨기기</label>
+      <p class="hint">차단 목록 <b id="blockCount">0</b>명 · 글·댓글을 통째로 숨깁니다.</p>
+      <a id="blockManage" href="blocklist.html" target="_blank" rel="noopener">차단 목록 관리 · 가져오기</a>
+    </fieldset>
     <fieldset id="hotkeyBox">
       <legend>단축키</legend>
       <label><input type="checkbox" id="hotkeys"> 단축키 사용</label>
@@ -43,6 +49,7 @@
     <p id="status" role="status"></p>
   </main>
   <script src="core.js"></script>
+  <script src="block-core.js"></script>
   <script src="sync.js"></script>
   <script src="popup.js"></script>
 </body>

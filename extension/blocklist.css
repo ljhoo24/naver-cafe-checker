@@ -1,0 +1,49 @@
+:root { font-family: "Malgun Gothic",system-ui,sans-serif; color:#233c33; background:#f6f8f5; font-size:13px; color-scheme:light; }
+* { box-sizing:border-box; }
+/* Management opens in a tab; keep controls centered and scroll the main panel. */
+html { height:100%; }
+body { width:min(100%,480px); height:100dvh; margin:0 auto; display:flex; flex-direction:column; overflow:hidden; }
+header { display:flex; flex:none; align-items:center; gap:12px; padding:23px 22px 18px; }
+.logo { display:grid; place-items:center; width:38px; height:38px; border-radius:13px; background:#2a644f; color:#fff; font-size:28px; font-weight:600; }
+h1 { margin:0 0 4px; font-size:19px; letter-spacing:-.7px; }
+header p { margin:0; color:#748178; font-size:11px; }
+main { flex:1; min-height:0; padding:0 22px; overflow-x:hidden; overflow-y:auto; scrollbar-gutter:stable; }
+h2 { font-size:13px; margin:0; }
+.summary { background:#e4eee6; color:#326347; border-radius:8px; padding:10px 12px; font-size:12px; margin-bottom:18px; }
+.summary.paused { background:#f4ead7; color:#7c6334; }
+.add-panel { padding:17px; background:#fff; border:1px solid #e0e6de; border-radius:12px; }
+.hint { font-size:11px; color:#7a857d; margin:6px 0 12px; }
+textarea, input[type="search"] { font:inherit; background:#fafbf9; border:1px solid #dce3d9; border-radius:7px; width:100%; padding:10px; outline:none; }
+textarea { display:block; resize:none; height:66px; overflow-y:auto; }
+textarea:focus, input[type="search"]:focus { border-color:#3e7f60; box-shadow:0 0 0 2px #3e7f601c; }
+button { font:inherit; cursor:pointer; }
+button:disabled { cursor:wait; opacity:.55; }
+button:focus-visible, input:focus-visible { outline:2px solid #3e7f60; outline-offset:3px; }
+.primary { border:0; border-radius:7px; padding:11px; background:#2b644e; color:#fff; font-weight:700; width:100%; margin-top:8px; }
+.primary:hover { background:#204f3c; }
+.quick { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:20px 0; border-bottom:1px solid #e1e7dd; margin-bottom:18px; cursor:pointer; }
+.quick strong { font-size:12px; }
+.quick small { display:block; color:#7b867c; font-size:10px; margin-top:5px; }
+input[type="checkbox"] { accent-color:#2b644e; width:16px; height:16px; cursor:pointer; }
+.switch { margin-left:auto; position:relative; width:36px; height:22px; flex:none; }
+.switch input { position:absolute; inset:0; margin:0; width:100%; height:100%; opacity:0; z-index:1; }
+.switch span { display:block; width:100%; height:100%; border-radius:20px; background:#c2cbc0; }
+.switch span::after { content:""; position:absolute; left:3px; top:3px; background:#fff; width:16px; height:16px; border-radius:50%; transition:transform .15s; }
+.switch input:checked + span { background:#2b644e; }
+.switch input:checked + span::after { transform:translateX(14px); }
+.switch input:focus-visible + span { outline:2px solid #3e7f60; outline-offset:3px; }
+.list-heading { display:flex; align-items:center; gap:10px; margin-bottom:12px; }
+.list-heading h2 { margin-right:auto; }
+#count { color:#477658; margin-left:4px; }
+.text-button { border:0; padding:0; background:none; color:#788276; font-size:10px; }
+.text-button:hover { color:#24573e; text-decoration:underline; }
+#search { font-size:12px; }
+#list { margin:8px 0 0; padding:0; list-style:none; }
+#list li { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 2px; border-bottom:1px solid #e7ebe3; }
+#list li span { overflow-wrap:anywhere; }
+#list li button { flex:none; background:#fff; border:1px solid #dce3d8; color:#71806e; border-radius:5px; padding:4px 8px; font-size:10px; }
+.empty { text-align:center; line-height:1.8; color:#8b9488; font-size:12px; padding:14px 0; }
+#status { flex:none; height:34px; padding:0 22px; margin:6px 0; font-size:11px; line-height:17px; overflow-y:auto; color:#34704e; overflow-wrap:anywhere; }
+#status.error { color:#af3939; }
+footer { flex:none; padding:14px 22px 17px; background:#eef2eb; color:#899181; font-size:10px; line-height:1.8; }
+.sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }

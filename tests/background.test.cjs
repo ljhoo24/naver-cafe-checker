@@ -26,12 +26,15 @@ function load(initial, sync = createSyncStore()) {
   const hooks = {};
   const menus = [];
   const alarms = new Map();
+  const sent = [];
   const chrome = {
     runtime: {
+      id: 'test',
       onInstalled: { addListener: fn => { hooks.installed = fn; } },
       onStartup: { addListener: fn => { hooks.startup = fn; } },
       onMessage: { addListener: fn => { hooks.message = fn; } }
     },
+    tabs: { sendMessage: async (...args) => { sent.push(args); } },
     contextMenus: {
       removeAll: cb => { menus.length = 0; cb(); },
       create: item => menus.push(item),
@@ -53,14 +56,34 @@ function load(initial, sync = createSyncStore()) {
   vm.runInContext(source('background.js'), context);
   const syncNow = () => new Promise(resolve => hooks.message({ type: 'ncc-sync-now' }, {}, resolve));
   const reads = () => Object.keys(store.data).filter(k => k.startsWith('r:')).sort();
-  return { store, sync, hooks, menus, alarms, syncNow, reads };
+  return { store, sync, hooks, menus, alarms, syncNow, reads, sent };
 }
 
 test('creates link context menus limited to cafe URLs', () => {
   const bg = load();
   bg.hooks.installed();
-  assert.deepEqual(bg.menus.map(m => m.id), ['ncc-unread', 'ncc-read']);
-  for (const m of bg.menus) assert.deepEqual([...m.targetUrlPatterns], ['*://cafe.naver.com/*', '*://m.cafe.naver.com/*']);
+  assert.deepEqual(bg.menus.map(m => m.id), ['ncc-unread', 'ncc-read', 'cafe-quiet-nickname']);
+  for (const m of bg.menus.slice(0,2)) assert.deepEqual([...m.targetUrlPatterns], ['*://cafe.naver.com/*', '*://m.cafe.naver.com/*']);
+  assert.deepEqual([...bg.menus[2].documentUrlPatterns], ['*://cafe.naver.com/*', '*://m.cafe.naver.com/*']);
+});
+
+test('blocking shares the worker safely with reading, preserves local history and routes to the right frame', async () => {
+  const bg = load({settings:{sync:false},'r:c:1:1':1});
+  const send = action => new Promise(resolve => bg.hooks.message({channel:'cafe-quiet',action},{id:'test'},resolve));
+  const result = await Promise.all([send({type:'add',names:['가']}),send({type:'add',names:['나']})]);
+  assert.deepEqual([...result[1].state.blocked],['가','나']);
+  assert.equal(bg.store.data['r:c:1:1'],1);
+  assert.equal(bg.hooks.message({channel:'cafe-quiet',action:{type:'add',names:['외부']}},{id:'other'},()=>assert.fail('foreign sender')),false);
+  const set = bg.store.local.set;
+  bg.store.local.set = async () => { throw Error('disk full'); };
+  assert.equal((await send({type:'add',names:['실패']})).ok,false);
+  bg.store.local.set = set;
+  assert.equal((await send({type:'add',names:['다']})).ok,true);
+  bg.hooks.menu({menuItemId:'cafe-quiet-nickname',frameId:17,selectionText:'닉'},{id:42});
+  await wait(20);
+  assert.equal(bg.sent[0][0],42); assert.equal(bg.sent[0][2].frameId,17);
+  assert.equal(bg.sent[0][1].selection,'닉');
+  assert.equal(Object.keys(bg.sync.data).length,0, 'block lists stay local');
 });
 
 test('context menu marks and unmarks, including url-name records', async () => {

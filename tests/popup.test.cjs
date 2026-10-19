@@ -10,13 +10,35 @@ async function popup(initial) {
   const dom = new JSDOM(`<!doctype html><html><body>${body}</body></html>`, { runScripts: 'outside-only' });
   const w = dom.window;
   w.chrome = {
-    runtime: { sendMessage: async m => { messages.push(m); await store.local.set({ 'sync:status': { at: Date.now(), ok: true, synced: 2, total: 2 } }); } },
+    runtime: { sendMessage: async m => {
+      messages.push(m);
+      if (m.channel === 'cafe-quiet') {
+        const state = w.CafeQuiet.update(store.data.cafeQuietSettings,m.action);
+        await store.local.set({cafeQuietSettings:state}); return {ok:true,state};
+      }
+      await store.local.set({ 'sync:status': { at: Date.now(), ok: true, synced: 2, total: 2 } });
+    } },
     storage: { local: store.local, onChanged: store.onChanged }
   };
-  for (const f of ['core.js', 'sync.js', 'popup.js']) w.eval(source(f));
+  for (const f of ['core.js', 'sync.js', 'block-core.js', 'popup.js']) w.eval(source(f));
   await wait(30);
   return { dom, w, store, messages, $: id => w.document.getElementById(id) };
 }
+
+test('popup exposes block controls without overwriting read settings or block names', async t => {
+  const p = await popup({settings:{dim:false},cafeQuietSettings:{blocked:['차단맨']}});
+  t.after(()=>p.dom.window.close());
+  assert.equal(p.$('blocking').checked,true);
+  assert.equal(p.$('blockCount').textContent,'1');
+  assert.equal(p.$('blockManage').getAttribute('href'),'blocklist.html');
+  p.$('blocking').checked = false;
+  p.$('blocking').dispatchEvent(new p.w.Event('change')); await wait(20);
+  assert.equal(p.store.data.cafeQuietSettings.enabled,false);
+  assert.deepEqual(p.store.data.cafeQuietSettings.blocked,['차단맨']);
+  assert.equal(p.store.data.settings.dim,false);
+  await p.store.local.set({settings:{enabled:false}}); await wait(20);
+  assert.equal(p.$('blockBox').disabled,true);
+});
 
 test('shows count, settings and sync status; toggles save', async t => {
   const p = await popup({ 'r:c:1:1': 1, 'r:c:1:2': 2, 'a:x': '1', 'sync:status': { at: Date.now() - 120000, ok: true, synced: 2, total: 2 } });

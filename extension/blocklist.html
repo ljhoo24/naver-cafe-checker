@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>카페 읽음 표시 · 차단 관리</title>
+  <link rel="stylesheet" href="blocklist.css">
+  <script src="block-core.js" defer></script>
+  <script src="blocklist.js" defer></script>
+</head>
+<body>
+  <header><span class="logo" aria-hidden="true">－</span><div><h1>카페 읽음 표시 · 차단 관리</h1><p>차단한 글과 안내 문구까지 숨깁니다.</p></div><label class="switch"><input id="enabled" type="checkbox" aria-label="차단한 사용자 숨기기"><span></span></label></header>
+  <main>
+    <div id="summary" class="summary">차단 목록을 불러오는 중…</div>
+    <p class="hint">기존 ‘카페 조용히’ 목록은 내보낸 JSON을 아래 ‘가져오기’로 옮긴 후 기존 확장을 꺼주세요.</p>
+    <section class="add-panel" aria-labelledby="add-title">
+      <h2 id="add-title">닉네임 차단</h2>
+      <p class="hint">모든 카페에서 같은 닉네임을 숨깁니다.</p>
+      <form id="add-form"><label class="sr-only" for="names">차단할 닉네임, 한 줄에 한 명</label><textarea id="names" rows="2" maxlength="100000" placeholder="닉네임 입력 · 여러 명은 줄바꿈" required></textarea><button class="primary" id="add" type="submit">차단 목록에 추가</button></form>
+    </section>
+    <label class="quick"><div><strong>닉네임 위에서 바로 차단</strong><small>마우스를 올리면 차단 버튼이 나타나요.</small></div><input id="quick-block" type="checkbox"></label>
+    <section aria-labelledby="list-title">
+      <div class="list-heading"><h2 id="list-title">차단 목록 <span id="count">0</span></h2><button id="export" class="text-button">내보내기</button><button id="import" class="text-button">가져오기</button><input id="import-file" type="file" accept="application/json,.json" hidden></div>
+      <label class="sr-only" for="search">차단 목록 검색</label><input id="search" type="search" placeholder="차단한 닉네임 검색" autocomplete="off">
+      <ul id="list" aria-label="차단한 닉네임"></ul><p id="empty" class="empty" hidden>아직 차단한 사용자가 없어요.<br>닉네임을 추가하면 목록에 표시됩니다.</p>
+    </section>
+  </main>
+  <p id="status" role="status" aria-live="polite"></p>
+  <footer>닉네임을 선택한 뒤 우클릭으로도 차단할 수 있어요.<br>목록은 이 브라우저에만 저장됩니다.</footer>
+</body>
+</html>

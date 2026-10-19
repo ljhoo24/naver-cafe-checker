@@ -5,6 +5,7 @@ h1 { margin: 0; font-size: 15px; }
 main { padding: 12px 14px 14px; }
 .count { margin: 0 0 10px; }
 .count b { color: #2f8a45; font-size: 15px; }
+#blockManage { display: inline-block; margin-top: 6px; color: #2f8a45; font-size: 12px; }
 fieldset { margin: 0 0 10px; padding: 8px 10px; border: 1px solid #e3e3e3; border-radius: 6px; }
 fieldset:disabled { opacity: .5; }
 legend { padding: 0 4px; color: #666; font-size: 12px; }
